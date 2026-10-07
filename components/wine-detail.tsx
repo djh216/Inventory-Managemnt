@@ -13,7 +13,7 @@ import {
   formatWhen,
   MOVEMENT_LABEL,
 } from "@/lib/format"
-import { fullestFreeLocation, lineAt, statusFor, winePosition } from "@/lib/inventory"
+import { fullestFreeLocation, lineAt, lineFree, statusFor, winePosition } from "@/lib/inventory"
 import type { Books, PostingPreset, Wine } from "@/lib/types"
 import { ColorMark, StatusPill } from "@/components/marks"
 import { Button } from "@/components/ui/button"
@@ -70,14 +70,14 @@ export function WineDetail({
       {wine.note ? <p className="text-sm leading-6">{wine.note}</p> : null}
 
       <div>
-        <h3 className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Floor</h3>
+        <h3 className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Warehouse (bottles)</h3>
         <table className="mt-2 w-full text-sm">
           <thead className="text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
             <tr>
-              <th className="py-1 font-medium">House</th>
+              <th className="py-1 font-medium">Location</th>
               <th className="py-1 font-medium">On hand</th>
-              <th className="py-1 font-medium">Held</th>
-              <th className="py-1 font-medium">Free</th>
+              <th className="py-1 font-medium">Committed</th>
+              <th className="py-1 font-medium">Available</th>
             </tr>
           </thead>
           <tbody>
@@ -85,12 +85,13 @@ export function WineDetail({
               const line = lineAt(books, wine.id, location.id)
               const onHand = line?.onHandBottles ?? 0
               const held = line?.allocatedBottles ?? 0
+              const available = line ? lineFree(line) : 0
               return (
                 <tr key={location.id} className="border-t border-border">
                   <td className="py-2 pr-2">{location.name}</td>
-                  <td className="py-2 tabular-nums">{formatBottles(onHand, wine.bottlesPerCase)}</td>
-                  <td className="py-2 tabular-nums">{formatBottles(held, wine.bottlesPerCase)}</td>
-                  <td className="py-2 tabular-nums">{formatBottles(onHand - held, wine.bottlesPerCase)}</td>
+                  <td className="py-2 tabular-nums">{formatCount(onHand)}</td>
+                  <td className="py-2 tabular-nums">{formatCount(held)}</td>
+                  <td className="py-2 tabular-nums">{formatCount(available)}</td>
                 </tr>
               )
             })}

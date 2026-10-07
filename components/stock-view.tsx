@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input"
 import { MovementDialog } from "@/components/movement-dialog"
 import { StatusPill } from "@/components/marks"
 import { WineDetail } from "@/components/wine-detail"
-import { formatBottles, formatCount } from "@/lib/format"
+import { formatCount } from "@/lib/format"
+import { lineFree } from "@/lib/inventory"
 import { fullestFreeLocation, lineAt, statusFor, winePosition } from "@/lib/inventory"
 import type { Books, PostingPreset } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -111,10 +112,18 @@ export function StockView({ books, initialHouse }: { books: Books; initialHouse?
                   <th className="px-4 py-3 font-medium">Wine</th>
                   {books.locations.map((location) => (
                     <th key={location.id} className="px-2 py-3 font-medium">
-                      {location.city}
+                      <span className="block">{location.name}</span>
+                      <span className="mt-0.5 block font-normal normal-case tracking-normal text-muted-foreground">
+                        On hand (bottles)
+                      </span>
                     </th>
                   ))}
-                  <th className="px-2 py-3 font-medium">Available</th>
+                  <th className="px-2 py-3 font-medium">
+                    <span className="block">Available</span>
+                    <span className="mt-0.5 block font-normal normal-case tracking-normal text-muted-foreground">
+                      (bottles)
+                    </span>
+                  </th>
                   <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
               </thead>
@@ -141,12 +150,13 @@ export function StockView({ books, initialHouse }: { books: Books; initialHouse?
                         const line = lineAt(books, wine.id, location.id)
                         const onHand = line?.onHandBottles ?? 0
                         const held = line?.allocatedBottles ?? 0
+                        const available = line ? lineFree(line) : 0
                         return (
                           <td key={location.id} className="px-2 py-3 align-top tabular-nums">
-                            <span>{formatBottles(onHand, wine.bottlesPerCase)}</span>
+                            <span>{formatCount(onHand)}</span>
                             {held > 0 ? (
                               <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                                {formatBottles(held, wine.bottlesPerCase)} held
+                                {formatCount(held)} committed · {formatCount(available)} avail.
                               </span>
                             ) : null}
                           </td>
