@@ -7,7 +7,6 @@ const links = [
   { href: "/days-on-hand", label: "Days on hand" },
   { href: "/catalog", label: "Catalog" },
   { href: "/stock", label: "Stock" },
-  { href: "/ledger", label: "Ledger" },
 ] as const
 
 function isCurrent(pathname: string | null, href: string) {
