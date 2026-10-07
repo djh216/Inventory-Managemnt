@@ -11,6 +11,7 @@ import {
   DAYS_ON_HAND_TABLE_WINDOWS,
   daysOnHandBandFromPace,
   daysOnHandSummary,
+  formatDaysOnHandTable,
   formatDaysRemaining,
   paceAtWindow,
   salesPaceWindowDays,
@@ -269,10 +270,10 @@ export function DaysOnHandView({ books }: { books: Books }) {
                   </td>
                   <td className="px-2 py-3 tabular-nums">{formatCount(row.line.available)}</td>
                   <td className="px-2 py-3 tabular-nums font-medium">
-                    {formatDaysRemaining(row.pace28.daysRemaining)}
+                    {formatDaysOnHandTable(row.pace28.daysRemaining)}
                   </td>
-                  <td className="px-2 py-3 tabular-nums">{formatDaysRemaining(row.pace90.daysRemaining)}</td>
-                  <td className="px-2 py-3 tabular-nums">{formatDaysRemaining(row.pace180.daysRemaining)}</td>
+                  <td className="px-2 py-3 tabular-nums">{formatDaysOnHandTable(row.pace90.daysRemaining)}</td>
+                  <td className="px-2 py-3 tabular-nums">{formatDaysOnHandTable(row.pace180.daysRemaining)}</td>
                   <td className="px-4 py-3">
                     <DaysOnHandPill band={statusBand} />
                   </td>

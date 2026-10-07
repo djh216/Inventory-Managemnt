@@ -1,6 +1,12 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { bottlesShippedInWindow, paceAtWindow, reorderAlerts, supplyLine } from "./supply"
+import {
+  bottlesShippedInWindow,
+  formatDaysOnHandTable,
+  paceAtWindow,
+  reorderAlerts,
+  supplyLine,
+} from "./supply"
 import type { Books, Wine } from "./types"
 
 function wine(overrides: Partial<Wine> = {}): Wine {
@@ -76,6 +82,11 @@ test("flags reorder when days remaining are inside partner lead time", () => {
   const line = supplyLine(start, start.wines[0], now)
   assert.equal(line.urgency, "critical")
   assert.ok(line.suggestedReorderBottles > 0)
+})
+
+test("formats table days on hand as floored whole days", () => {
+  assert.equal(formatDaysOnHandTable(28.9), "28 days")
+  assert.equal(formatDaysOnHandTable(0.75), "0 days")
 })
 
 test("computes days on hand per pace window", () => {

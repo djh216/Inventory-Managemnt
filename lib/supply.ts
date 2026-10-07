@@ -207,6 +207,15 @@ export function formatDaysRemaining(days: number | null) {
   return `${Math.round(days * 10) / 10} days`
 }
 
+/** Days-on-hand table: whole days only, rounded down. */
+export function formatDaysOnHandTable(days: number | null) {
+  if (days === null) return "—"
+  if (!Number.isFinite(days)) return "—"
+  if (days <= 0) return "0 days"
+  if (days >= 365) return "365+ days"
+  return `${Math.floor(days)} days`
+}
+
 export type DaysOnHandBand = "out" | "urgent" | "tight" | "comfortable" | "idle" | "unknown"
 
 export function daysOnHandBand(line: SupplyLine): DaysOnHandBand {
