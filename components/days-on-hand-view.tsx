@@ -34,12 +34,12 @@ import {
 import { cn } from "@/lib/utils"
 
 type FilterBand = "all" | DaysOnHandBand
-type SortKey = "product" | "available" | "days28" | "days90" | "days180" | "status"
+type SortKey = "product" | "available" | "days30" | "days90" | "days180" | "status"
 type SortDir = "asc" | "desc"
 
 type TableRow = {
   line: SupplyLine
-  pace28: PaceAtWindow
+  pace30: PaceAtWindow
   pace90: PaceAtWindow
   pace180: PaceAtWindow
 }
@@ -77,15 +77,15 @@ export function DaysOnHandView({ books }: { books: Books }) {
 
   const [query, setQuery] = useState("")
   const [band, setBand] = useState<FilterBand>("all")
-  const [sortKey, setSortKey] = useState<SortKey>("days28")
+  const [sortKey, setSortKey] = useState<SortKey>("days30")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
 
   const filtered = useMemo(() => {
     const matched = rows.filter((row) => {
       const statusBand = daysOnHandBandFromPace(
         row.line.available,
-        row.pace28.dailyRate,
-        row.pace28.daysRemaining,
+        row.pace30.dailyRate,
+        row.pace30.daysRemaining,
       )
       if (band !== "all" && statusBand !== band) return false
       if (!query.trim()) return true
@@ -114,7 +114,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
           <h1 className="mt-1 font-heading text-4xl tracking-tight">Days on hand</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             Upload order history to set each product&apos;s sales pace. The table shows days on hand at{" "}
-            28-, 90-, and 180-day windows (available ÷ average daily orders in each window).
+            30-, 90-, and 180-day windows (available ÷ average daily orders in each window).
           </p>
         </div>
       </header>
@@ -163,7 +163,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
           <OrderHistoryUpload />
           <aside className="rounded-lg bg-muted/35 px-4 py-3 ring-1 ring-foreground/5">
             <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Reorder alerts</p>
-            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">Pace window for live inventory alerts (table uses 28 / 90 / 180).</p>
+            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">Pace window for live inventory alerts (table uses 30 / 90 / 180).</p>
             <PaceWindowForm key={windowDays} windowDays={windowDays} />
             {orderLineCount > 0 ? (
               <ClearHistoryButton className="mt-3 w-full justify-start px-0 text-muted-foreground hover:text-foreground" />
@@ -257,8 +257,8 @@ export function DaysOnHandView({ books }: { books: Books }) {
             {filtered.map((row) => {
               const statusBand = daysOnHandBandFromPace(
                 row.line.available,
-                row.pace28.dailyRate,
-                row.pace28.daysRemaining,
+                row.pace30.dailyRate,
+                row.pace30.daysRemaining,
               )
               return (
                 <tr key={row.line.wine.id} className="border-t border-border">
@@ -270,7 +270,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
                   </td>
                   <td className="px-2 py-3 tabular-nums">{formatCount(row.line.available)}</td>
                   <td className="px-2 py-3 tabular-nums font-medium">
-                    {formatDaysOnHandTable(row.pace28.daysRemaining)}
+                    {formatDaysOnHandTable(row.pace30.daysRemaining)}
                   </td>
                   <td className="px-2 py-3 tabular-nums">{formatDaysOnHandTable(row.pace90.daysRemaining)}</td>
                   <td className="px-2 py-3 tabular-nums">{formatDaysOnHandTable(row.pace180.daysRemaining)}</td>
@@ -341,7 +341,7 @@ function PaceWindowForm({ windowDays }: { windowDays: number }) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="28">28 days</SelectItem>
+          <SelectItem value="30">30 days</SelectItem>
           <SelectItem value="60">60 days</SelectItem>
           <SelectItem value="90">90 days</SelectItem>
           <SelectItem value="180">180 days</SelectItem>
@@ -418,20 +418,20 @@ function buildTableRows(books: Books): TableRow[] {
     .filter((line) => line.wine.active)
     .map((line) => ({
       line,
-      pace28: paceAtWindow(books, line.wine, 28),
+      pace30: paceAtWindow(books, line.wine, 30),
       pace90: paceAtWindow(books, line.wine, 90),
       pace180: paceAtWindow(books, line.wine, 180),
     }))
 }
 
 function sortKeyForWindow(days: number): SortKey {
-  if (days === 28) return "days28"
+  if (days === 30) return "days30"
   if (days === 90) return "days90"
   return "days180"
 }
 
 function paceForSortKey(row: TableRow, key: SortKey): PaceAtWindow | null {
-  if (key === "days28") return row.pace28
+  if (key === "days30") return row.pace30
   if (key === "days90") return row.pace90
   if (key === "days180") return row.pace180
   return null
@@ -445,7 +445,7 @@ function defaultSortDir(key: SortKey): SortDir {
 function sortTableRows(rows: TableRow[], key: SortKey, dir: SortDir) {
   const mul = dir === "asc" ? 1 : -1
   return [...rows].sort((a, b) => {
-    if (dir === "desc" && (key === "days28" || key === "days90" || key === "days180")) {
+    if (dir === "desc" && (key === "days30" || key === "days90" || key === "days180")) {
       const paceOrder = compareNoPaceLast(
         paceForSortKey(a, key)?.dailyRate ?? null,
         paceForSortKey(b, key)?.dailyRate ?? null,
@@ -472,11 +472,11 @@ function compareSortKey(a: TableRow, b: TableRow, key: SortKey) {
     )
   }
   if (key === "available") return a.line.available - b.line.available
-  if (key === "days28") return compareDaysRemaining(a.pace28.daysRemaining, b.pace28.daysRemaining)
+  if (key === "days30") return compareDaysRemaining(a.pace30.daysRemaining, b.pace30.daysRemaining)
   if (key === "days90") return compareDaysRemaining(a.pace90.daysRemaining, b.pace90.daysRemaining)
   if (key === "days180") return compareDaysRemaining(a.pace180.daysRemaining, b.pace180.daysRemaining)
-  const bandA = daysOnHandBandFromPace(a.line.available, a.pace28.dailyRate, a.pace28.daysRemaining)
-  const bandB = daysOnHandBandFromPace(b.line.available, b.pace28.dailyRate, b.pace28.daysRemaining)
+  const bandA = daysOnHandBandFromPace(a.line.available, a.pace30.dailyRate, a.pace30.daysRemaining)
+  const bandB = daysOnHandBandFromPace(b.line.available, b.pace30.dailyRate, b.pace30.daysRemaining)
   return bandSortRank(bandA) - bandSortRank(bandB)
 }
 

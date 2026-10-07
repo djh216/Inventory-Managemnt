@@ -94,7 +94,7 @@ export type Books = {
   /** CSV order history for sales-pace calculations. */
   orderHistory?: OrderHistoryLine[]
   orderHistoryImportedAt?: string | null
-  /** Rolling window for average daily sales (default 28). */
+  /** Rolling window for average daily sales (default 30). */
   salesPaceWindowDays?: number
 }
 

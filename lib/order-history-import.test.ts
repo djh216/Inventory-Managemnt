@@ -42,7 +42,7 @@ function books(): Books {
     movements: [],
     orderHistory: [],
     orderHistoryImportedAt: null,
-    salesPaceWindowDays: 28,
+    salesPaceWindowDays: 30,
   }
 }
 
@@ -85,8 +85,8 @@ test("uploaded orders drive days on hand without changing inventory", () => {
   assert.equal(imported.ok, true)
   if (!imported.ok) return
   const now = new Date("2026-10-07T12:00:00.000Z")
-  assert.equal(bottlesShippedInWindow(imported.books, "w-1", 28, now), 280)
+  assert.equal(bottlesShippedInWindow(imported.books, "w-1", 30, now), 280)
   const line = supplyLine(imported.books, imported.books.wines[0], now)
-  assert.equal(line.dailyRate, 10)
-  assert.equal(line.daysRemaining, 28)
+  assert.equal(line.dailyRate, 280 / 30)
+  assert.ok(line.daysRemaining !== null && Math.abs(line.daysRemaining - 30) < 0.001)
 })

@@ -43,8 +43,8 @@ function migrateBooks(books: Books): Books {
     next = { ...next, orderHistoryImportedAt: null }
     changed = true
   }
-  if (next.salesPaceWindowDays === undefined) {
-    next = { ...next, salesPaceWindowDays: 28 }
+  if (next.salesPaceWindowDays === undefined || next.salesPaceWindowDays === 28) {
+    next = { ...next, salesPaceWindowDays: 30 }
     changed = true
   }
   return changed ? next : books

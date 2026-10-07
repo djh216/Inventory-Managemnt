@@ -6,7 +6,7 @@ Live inventory for a wine distribution operation, built on **Cursor Initial Inve
 
 1. **Live inventory** — on-hand, available, and committed bottles update as you post receipts, shipments, holds, and counts.
 2. **Order tracking** — every **shipment** posting is a customer order. The **Orders** page lists outbound history. Upload a CSV on **Days on hand** to import historical orders (pace only — inventory is not reduced again).
-3. **Days on hand** — over your chosen window (default **28 days**), average daily sales from uploaded orders plus shipments gives **days on hand** = available ÷ daily pace. The **Days on hand** dashboard sorts every SKU by cover.
+3. **Days on hand** — over your chosen window (default **30 days**), average daily sales from uploaded orders plus shipments gives **days on hand** = available ÷ daily pace. The **Days on hand** dashboard shows **30 / 90 / 180** day cover columns.
 4. **Days of supply / reorder** — same pace math powers reorder alerts on **Live inventory** when cover hits winery lead time.
 5. **Reorder alerts** — when days remaining fall inside a wine’s **winery lead time**, the desk flags it and suggests a PO quantity to restore **target cover** (default 45 days). Use **Remove from alerts** for SKUs you don’t reorder (discontinued, direct ship, etc.); restore them from the desk or catalog anytime.
 

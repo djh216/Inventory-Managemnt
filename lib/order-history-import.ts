@@ -1,6 +1,6 @@
 import type { Books, OrderHistoryLine, Wine } from "./types"
 
-const DEFAULT_PACE_WINDOW_DAYS = 28
+const DEFAULT_PACE_WINDOW_DAYS = 30
 
 type ParsedRow = {
   line: number

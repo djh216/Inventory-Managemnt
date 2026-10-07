@@ -149,7 +149,7 @@ export function booksFromUpload(rows: CsvRow[]): Books {
     movements: [],
     orderHistory: [],
     orderHistoryImportedAt: null,
-    salesPaceWindowDays: 28,
+    salesPaceWindowDays: 30,
   }
 }
 

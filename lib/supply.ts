@@ -1,10 +1,10 @@
 import { winePosition } from "./inventory"
 import type { Books, Wine } from "./types"
 
-export const VELOCITY_WINDOW_DAYS = 28
+export const VELOCITY_WINDOW_DAYS = 30
 
 /** Fixed windows shown on the days-on-hand dashboard table. */
-export const DAYS_ON_HAND_TABLE_WINDOWS = [28, 90, 180] as const
+export const DAYS_ON_HAND_TABLE_WINDOWS = [30, 90, 180] as const
 
 export function salesPaceWindowDays(books: Books) {
   const days = books.salesPaceWindowDays ?? VELOCITY_WINDOW_DAYS
@@ -243,15 +243,15 @@ export function daysOnHandSummary(books: Books, now = new Date()) {
   let urgent = 0
   const pacedDays: number[] = []
   for (const line of lines) {
-    const pace28 = paceAtWindow(books, line.wine, VELOCITY_WINDOW_DAYS, now)
-    const band = daysOnHandBandFromPace(line.available, pace28.dailyRate, pace28.daysRemaining)
+    const pacePrimary = paceAtWindow(books, line.wine, VELOCITY_WINDOW_DAYS, now)
+    const band = daysOnHandBandFromPace(line.available, pacePrimary.dailyRate, pacePrimary.daysRemaining)
     if (band === "unknown" || band === "idle") {
       withoutPace += 1
       continue
     }
     withPace += 1
-    if (pace28.daysRemaining !== null && Number.isFinite(pace28.daysRemaining)) {
-      pacedDays.push(pace28.daysRemaining)
+    if (pacePrimary.daysRemaining !== null && Number.isFinite(pacePrimary.daysRemaining)) {
+      pacedDays.push(pacePrimary.daysRemaining)
     }
     if (band === "out" || band === "urgent") urgent += 1
   }

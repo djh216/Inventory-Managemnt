@@ -62,11 +62,11 @@ function books(target = wine()): Books {
 
 test("derives daily rate from shipments in the velocity window", () => {
   const now = new Date("2026-10-07T12:00:00.000Z")
-  const shipped = bottlesShippedInWindow(books(), "w-1", 28, now)
+  const shipped = bottlesShippedInWindow(books(), "w-1", 30, now)
   assert.equal(shipped, 140)
   const line = supplyLine(books(), wine(), now)
-  assert.equal(line.dailyRate, 5)
-  assert.equal(line.daysRemaining, 56)
+  assert.equal(line.dailyRate, 140 / 30)
+  assert.equal(line.daysRemaining, 280 / (140 / 30))
 })
 
 test("flags reorder when days remaining are inside partner lead time", () => {
@@ -94,9 +94,9 @@ test("computes days on hand per pace window", () => {
   const start = books()
   start.stock[0].availableBottles = 900
   start.movements[0].bottles = 280
-  const pace28 = paceAtWindow(start, start.wines[0], 28, now)
+  const pace30 = paceAtWindow(start, start.wines[0], 30, now)
   const pace90 = paceAtWindow(start, start.wines[0], 90, now)
-  assert.equal(pace28.daysRemaining, 90)
+  assert.equal(pace30.daysRemaining, 900 / (280 / 30))
   assert.equal(pace90.daysRemaining, 900 / (280 / 90))
 })
 
