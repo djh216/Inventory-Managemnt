@@ -250,24 +250,26 @@ export function DaysOnHandView({ books }: { books: Books }) {
 
       <div className="w-full overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10">
         <table className="w-full min-w-[72rem] text-sm">
-          <thead className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+          <thead className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
             <tr>
-              <th rowSpan={2} className="px-4 py-3 align-bottom font-medium">
+              <th rowSpan={2} className="px-4 py-3 text-left align-bottom font-medium">
                 <SortableHeader
                   label="Product"
                   active={sortKey === "product"}
                   dir={sortDir}
                   onClick={() => toggleSort("product")}
                   asCell={false}
+                  align="left"
                 />
               </th>
-              <th rowSpan={2} className="px-2 py-3 align-bottom font-medium">
+              <th rowSpan={2} className="px-2 py-3 text-center align-bottom font-medium">
                 <SortableHeader
                   label="Available"
                   active={sortKey === "available"}
                   dir={sortDir}
                   onClick={() => toggleSort("available")}
                   asCell={false}
+                  align="center"
                 />
               </th>
               {DAYS_ON_HAND_TABLE_WINDOWS.map((days) => (
@@ -279,13 +281,14 @@ export function DaysOnHandView({ books }: { books: Books }) {
                   {days}-day period
                 </th>
               ))}
-              <th rowSpan={2} className="px-4 py-3 align-bottom font-medium">
+              <th rowSpan={2} className="px-4 py-3 text-center align-bottom font-medium">
                 <SortableHeader
                   label="Status"
                   active={sortKey === "status"}
                   dir={sortDir}
                   onClick={() => toggleSort("status")}
                   asCell={false}
+                  align="center"
                 />
               </th>
             </tr>
@@ -298,6 +301,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
                   dir={sortDir}
                   onClick={() => toggleSort(sortKeyForSold(days))}
                   className="border-l border-border"
+                  align="center"
                 />,
                 <SortableHeader
                   key={`rate-${days}`}
@@ -305,6 +309,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
                   active={sortKey === sortKeyForRate(days)}
                   dir={sortDir}
                   onClick={() => toggleSort(sortKeyForRate(days))}
+                  align="center"
                 />,
                 <SortableHeader
                   key={`doh-${days}`}
@@ -312,6 +317,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
                   active={sortKey === sortKeyForWindow(days)}
                   dir={sortDir}
                   onClick={() => toggleSort(sortKeyForWindow(days))}
+                  align="center"
                 />,
               ])}
             </tr>
@@ -325,28 +331,34 @@ export function DaysOnHandView({ books }: { books: Books }) {
               )
               return (
                 <tr key={row.line.wine.id} className="border-t border-border">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-left">
                     <Link href={`/catalog?wine=${row.line.wine.id}`} className="font-medium hover:underline">
                       {wineName(row.line.wine)}
                     </Link>
                     <p className="font-mono text-[11px] text-muted-foreground">{row.line.wine.sku}</p>
                   </td>
-                  <td className="px-2 py-3 tabular-nums">{formatCount(row.line.available)}</td>
+                  <td className="px-2 py-3 text-center tabular-nums">{formatCount(row.line.available)}</td>
                   {DAYS_ON_HAND_TABLE_WINDOWS.flatMap((days) => {
                     const pace = paceForWindowDays(row, days)
                     return [
-                      <td key={`${row.line.wine.id}-sold-${days}`} className="border-l border-border px-2 py-3 tabular-nums">
+                      <td
+                        key={`${row.line.wine.id}-sold-${days}`}
+                        className="border-l border-border px-2 py-3 text-center tabular-nums"
+                      >
                         {formatCount(pace.shippedWindow)}
                       </td>,
-                      <td key={`${row.line.wine.id}-rate-${days}`} className="px-2 py-3 tabular-nums">
+                      <td key={`${row.line.wine.id}-rate-${days}`} className="px-2 py-3 text-center tabular-nums">
                         {formatBottlesPerDayTable(pace.dailyRate)}
                       </td>,
-                      <td key={`${row.line.wine.id}-doh-${days}`} className="px-2 py-3 tabular-nums font-medium">
+                      <td
+                        key={`${row.line.wine.id}-doh-${days}`}
+                        className="px-2 py-3 text-center tabular-nums font-medium"
+                      >
                         {formatDaysOnHandTable(pace.daysRemaining)}
                       </td>,
                     ]
                   })}
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-center">
                     <DaysOnHandPill band={statusBand} />
                   </td>
                 </tr>
@@ -460,6 +472,7 @@ function SortableHeader({
   onClick,
   className,
   asCell = true,
+  align = "center",
 }: {
   label: string
   active: boolean
@@ -467,13 +480,15 @@ function SortableHeader({
   onClick: () => void
   className?: string
   asCell?: boolean
+  align?: "left" | "center"
 }) {
   const control = (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1 rounded-sm text-left transition-colors hover:text-foreground",
+        "inline-flex items-center gap-1 rounded-sm transition-colors hover:text-foreground",
+        align === "center" ? "justify-center" : "text-left",
         active && "text-foreground",
       )}
     >
@@ -483,13 +498,18 @@ function SortableHeader({
       </span>
     </button>
   )
-  if (!asCell) return control
+  const wrapped = align === "center" && !asCell ? <div className="flex justify-center">{control}</div> : control
+  if (!asCell) return wrapped
   return (
     <th
-      className={cn("px-2 py-2 font-medium", className)}
+      className={cn(
+        "px-2 py-2 font-medium",
+        align === "center" ? "text-center" : "text-left",
+        className,
+      )}
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
     >
-      {control}
+      {align === "center" ? <div className="flex justify-center">{control}</div> : control}
     </th>
   )
 }
