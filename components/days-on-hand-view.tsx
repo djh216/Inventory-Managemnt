@@ -384,9 +384,25 @@ function defaultSortDir(key: SortKey): SortDir {
 
 function sortSupplyLines(lines: SupplyLine[], key: SortKey, dir: SortDir) {
   const mul = dir === "asc" ? 1 : -1
-  return [...lines].sort(
-    (a, b) => mul * compareSortKey(a, b, key) || a.wine.label.localeCompare(b.wine.label),
-  )
+  return [...lines].sort((a, b) => {
+    if (dir === "desc") {
+      const paceOrder = compareNoPaceLast(a, b)
+      if (paceOrder !== 0) return paceOrder
+    }
+    return mul * compareSortKey(a, b, key) || a.wine.label.localeCompare(b.wine.label)
+  })
+}
+
+/** No sales in the pace window sorts after SKUs with pace when sorting high → low. */
+function compareNoPaceLast(a: SupplyLine, b: SupplyLine) {
+  const aNoPace = !hasSalesPace(a)
+  const bNoPace = !hasSalesPace(b)
+  if (aNoPace === bNoPace) return 0
+  return aNoPace ? 1 : -1
+}
+
+function hasSalesPace(line: SupplyLine) {
+  return line.dailyRate !== null && line.dailyRate > 0
 }
 
 function compareSortKey(a: SupplyLine, b: SupplyLine, key: SortKey) {
