@@ -1,0 +1,4 @@
+{
+  "install": "npm ci",
+  "start": "SESSION_NAME=\"wine-inventory-dev\"; tmux -f /exec-daemon/tmux.portal.conf has-session -t \"=$SESSION_NAME\" 2>/dev/null || tmux -f /exec-daemon/tmux.portal.conf new-session -d -s \"$SESSION_NAME\" -c /workspace -- \"${SHELL:-zsh}\" -l; tmux -f /exec-daemon/tmux.portal.conf send-keys -t \"$SESSION_NAME:0.0\" 'npm run dev' C-m"
+}
