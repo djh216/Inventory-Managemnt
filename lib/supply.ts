@@ -3,6 +3,9 @@ import type { Books, Wine } from "./types"
 
 export const VELOCITY_WINDOW_DAYS = 28
 
+/** Fixed windows shown on the days-on-hand dashboard table. */
+export const DAYS_ON_HAND_TABLE_WINDOWS = [28, 90, 180] as const
+
 export function salesPaceWindowDays(books: Books) {
   const days = books.salesPaceWindowDays ?? VELOCITY_WINDOW_DAYS
   return days >= 7 && days <= 365 ? days : VELOCITY_WINDOW_DAYS
@@ -31,6 +34,31 @@ export type PartnerRollup = {
 
 export function partnerName(wine: Wine) {
   return wine.partner.trim() || wine.producer.trim() || "Unassigned partner"
+}
+
+export type PaceAtWindow = {
+  windowDays: number
+  shippedWindow: number
+  dailyRate: number | null
+  daysRemaining: number | null
+}
+
+export function paceAtWindow(
+  books: Books,
+  wine: Wine,
+  windowDays: number,
+  now = new Date(),
+): PaceAtWindow {
+  const position = winePosition(books, wine.id)
+  const shippedWindow = bottlesShippedInWindow(books, wine.id, windowDays, now)
+  const dailyRate = shippedWindow > 0 ? shippedWindow / windowDays : null
+  const daysRemaining =
+    dailyRate && dailyRate > 0
+      ? position.free / dailyRate
+      : position.free > 0
+        ? null
+        : 0
+  return { windowDays, shippedWindow, dailyRate, daysRemaining }
 }
 
 export function bottlesShippedInWindow(books: Books, wineId: string, windowDays: number, now = new Date()) {
@@ -182,12 +210,20 @@ export function formatDaysRemaining(days: number | null) {
 export type DaysOnHandBand = "out" | "urgent" | "tight" | "comfortable" | "idle" | "unknown"
 
 export function daysOnHandBand(line: SupplyLine): DaysOnHandBand {
-  if (line.available <= 0 && line.dailyRate && line.dailyRate > 0) return "out"
-  if (line.available <= 0) return "idle"
-  if (!line.dailyRate || line.dailyRate <= 0) return "unknown"
-  if (line.daysRemaining === null) return "unknown"
-  if (line.daysRemaining <= 14) return "urgent"
-  if (line.daysRemaining <= 45) return "tight"
+  return daysOnHandBandFromPace(line.available, line.dailyRate, line.daysRemaining)
+}
+
+export function daysOnHandBandFromPace(
+  available: number,
+  dailyRate: number | null,
+  daysRemaining: number | null,
+): DaysOnHandBand {
+  if (available <= 0 && dailyRate && dailyRate > 0) return "out"
+  if (available <= 0) return "idle"
+  if (!dailyRate || dailyRate <= 0) return "unknown"
+  if (daysRemaining === null) return "unknown"
+  if (daysRemaining <= 14) return "urgent"
+  if (daysRemaining <= 45) return "tight"
   return "comfortable"
 }
 
@@ -198,14 +234,15 @@ export function daysOnHandSummary(books: Books, now = new Date()) {
   let urgent = 0
   const pacedDays: number[] = []
   for (const line of lines) {
-    const band = daysOnHandBand(line)
+    const pace28 = paceAtWindow(books, line.wine, VELOCITY_WINDOW_DAYS, now)
+    const band = daysOnHandBandFromPace(line.available, pace28.dailyRate, pace28.daysRemaining)
     if (band === "unknown" || band === "idle") {
       withoutPace += 1
       continue
     }
     withPace += 1
-    if (line.daysRemaining !== null && Number.isFinite(line.daysRemaining)) {
-      pacedDays.push(line.daysRemaining)
+    if (pace28.daysRemaining !== null && Number.isFinite(pace28.daysRemaining)) {
+      pacedDays.push(pace28.daysRemaining)
     }
     if (band === "out" || band === "urgent") urgent += 1
   }

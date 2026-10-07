@@ -8,12 +8,15 @@ import { OrderHistoryUpload } from "@/components/order-history-upload"
 import { clearOrderHistory, setSalesPaceWindow } from "@/lib/actions"
 import { formatCount, formatWhen, wineName } from "@/lib/format"
 import {
-  daysOnHandBand,
+  DAYS_ON_HAND_TABLE_WINDOWS,
+  daysOnHandBandFromPace,
   daysOnHandSummary,
   formatDaysRemaining,
+  paceAtWindow,
   salesPaceWindowDays,
   supplyLines,
   type DaysOnHandBand,
+  type PaceAtWindow,
   type SupplyLine,
 } from "@/lib/supply"
 import type { Books } from "@/lib/types"
@@ -30,8 +33,15 @@ import {
 import { cn } from "@/lib/utils"
 
 type FilterBand = "all" | DaysOnHandBand
-type SortKey = "product" | "available" | "sold" | "pace" | "days" | "status"
+type SortKey = "product" | "available" | "days28" | "days90" | "days180" | "status"
 type SortDir = "asc" | "desc"
+
+type TableRow = {
+  line: SupplyLine
+  pace28: PaceAtWindow
+  pace90: PaceAtWindow
+  pace180: PaceAtWindow
+}
 
 const bandLabel: Record<DaysOnHandBand, string> = {
   out: "Out of stock",
@@ -62,25 +72,27 @@ const bandStyle: Record<DaysOnHandBand, string> = {
 export function DaysOnHandView({ books }: { books: Books }) {
   const windowDays = salesPaceWindowDays(books)
   const summary = daysOnHandSummary(books)
-  const lines = useMemo(
-    () => supplyLines(books).filter((line) => line.wine.active),
-    [books],
-  )
+  const rows = useMemo(() => buildTableRows(books), [books])
 
   const [query, setQuery] = useState("")
   const [band, setBand] = useState<FilterBand>("all")
-  const [sortKey, setSortKey] = useState<SortKey>("days")
+  const [sortKey, setSortKey] = useState<SortKey>("days28")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
 
   const filtered = useMemo(() => {
-    const rows = lines.filter((line) => {
-      if (band !== "all" && daysOnHandBand(line) !== band) return false
+    const matched = rows.filter((row) => {
+      const statusBand = daysOnHandBandFromPace(
+        row.line.available,
+        row.pace28.dailyRate,
+        row.pace28.daysRemaining,
+      )
+      if (band !== "all" && statusBand !== band) return false
       if (!query.trim()) return true
-      const hay = `${line.wine.label} ${line.wine.sku} ${line.wine.producer}`.toLowerCase()
+      const hay = `${row.line.wine.label} ${row.line.wine.sku} ${row.line.wine.producer}`.toLowerCase()
       return hay.includes(query.trim().toLowerCase())
     })
-    return sortSupplyLines(rows, sortKey, sortDir)
-  }, [lines, band, query, sortKey, sortDir])
+    return sortTableRows(matched, sortKey, sortDir)
+  }, [rows, band, query, sortKey, sortDir])
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -100,8 +112,8 @@ export function DaysOnHandView({ books }: { books: Books }) {
           <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Sales pace</p>
           <h1 className="mt-1 font-heading text-4xl tracking-tight">Days on hand</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Upload order history to set each product&apos;s sales pace. Days on hand = available bottles ÷
-            average daily orders over the last {windowDays} days (uploaded orders plus shipments you post).
+            Upload order history to set each product&apos;s sales pace. The table shows days on hand at{" "}
+            28-, 90-, and 180-day windows (available ÷ average daily orders in each window).
           </p>
         </div>
       </header>
@@ -149,7 +161,8 @@ export function DaysOnHandView({ books }: { books: Books }) {
         <div className="grid gap-5 px-5 py-4 md:px-6 md:py-5 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start lg:gap-8">
           <OrderHistoryUpload />
           <aside className="rounded-lg bg-muted/35 px-4 py-3 ring-1 ring-foreground/5">
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Pace window</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Reorder alerts</p>
+            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">Pace window for live inventory alerts (table uses 28 / 90 / 180).</p>
             <PaceWindowForm key={windowDays} windowDays={windowDays} />
             {orderLineCount > 0 ? (
               <ClearHistoryButton className="mt-3 w-full justify-start px-0 text-muted-foreground hover:text-foreground" />
@@ -191,7 +204,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Showing {filtered.length} of {lines.length} active SKUs
+          Showing {filtered.length} of {rows.length} active SKUs
         </p>
       </section>
 
@@ -221,24 +234,15 @@ export function DaysOnHandView({ books }: { books: Books }) {
                 dir={sortDir}
                 onClick={() => toggleSort("available")}
               />
-              <SortableHeader
-                label={`Sold (${windowDays}d)`}
-                active={sortKey === "sold"}
-                dir={sortDir}
-                onClick={() => toggleSort("sold")}
-              />
-              <SortableHeader
-                label="Daily pace"
-                active={sortKey === "pace"}
-                dir={sortDir}
-                onClick={() => toggleSort("pace")}
-              />
-              <SortableHeader
-                label="Days on hand"
-                active={sortKey === "days"}
-                dir={sortDir}
-                onClick={() => toggleSort("days")}
-              />
+              {DAYS_ON_HAND_TABLE_WINDOWS.map((days) => (
+                <SortableHeader
+                  key={days}
+                  label={`DOH ${days}d`}
+                  active={sortKey === sortKeyForWindow(days)}
+                  dir={sortDir}
+                  onClick={() => toggleSort(sortKeyForWindow(days))}
+                />
+              ))}
               <SortableHeader
                 label="Status"
                 active={sortKey === "status"}
@@ -249,25 +253,32 @@ export function DaysOnHandView({ books }: { books: Books }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((line) => (
-              <tr key={line.wine.id} className="border-t border-border">
-                <td className="px-4 py-3">
-                  <Link href={`/catalog?wine=${line.wine.id}`} className="font-medium hover:underline">
-                    {wineName(line.wine)}
-                  </Link>
-                  <p className="font-mono text-[11px] text-muted-foreground">{line.wine.sku}</p>
-                </td>
-                <td className="px-2 py-3 tabular-nums">{formatCount(line.available)}</td>
-                <td className="px-2 py-3 tabular-nums">{formatCount(line.shippedWindow)}</td>
-                <td className="px-2 py-3 tabular-nums">
-                  {line.dailyRate ? line.dailyRate.toFixed(2) : "—"}
-                </td>
-                <td className="px-2 py-3 tabular-nums font-medium">{formatDaysRemaining(line.daysRemaining)}</td>
-                <td className="px-4 py-3">
-                  <DaysOnHandPill band={daysOnHandBand(line)} />
-                </td>
-              </tr>
-            ))}
+            {filtered.map((row) => {
+              const statusBand = daysOnHandBandFromPace(
+                row.line.available,
+                row.pace28.dailyRate,
+                row.pace28.daysRemaining,
+              )
+              return (
+                <tr key={row.line.wine.id} className="border-t border-border">
+                  <td className="px-4 py-3">
+                    <Link href={`/catalog?wine=${row.line.wine.id}`} className="font-medium hover:underline">
+                      {wineName(row.line.wine)}
+                    </Link>
+                    <p className="font-mono text-[11px] text-muted-foreground">{row.line.wine.sku}</p>
+                  </td>
+                  <td className="px-2 py-3 tabular-nums">{formatCount(row.line.available)}</td>
+                  <td className="px-2 py-3 tabular-nums font-medium">
+                    {formatDaysRemaining(row.pace28.daysRemaining)}
+                  </td>
+                  <td className="px-2 py-3 tabular-nums">{formatDaysRemaining(row.pace90.daysRemaining)}</td>
+                  <td className="px-2 py-3 tabular-nums">{formatDaysRemaining(row.pace180.daysRemaining)}</td>
+                  <td className="px-4 py-3">
+                    <DaysOnHandPill band={statusBand} />
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
         {filtered.length === 0 ? (
@@ -332,6 +343,7 @@ function PaceWindowForm({ windowDays }: { windowDays: number }) {
           <SelectItem value="28">28 days</SelectItem>
           <SelectItem value="60">60 days</SelectItem>
           <SelectItem value="90">90 days</SelectItem>
+          <SelectItem value="180">180 days</SelectItem>
         </SelectContent>
       </Select>
       <Button type="submit" size="sm" variant="secondary" disabled={pending || Number(value) === windowDays}>
@@ -400,61 +412,79 @@ function SortableHeader({
   )
 }
 
+function buildTableRows(books: Books): TableRow[] {
+  return supplyLines(books)
+    .filter((line) => line.wine.active)
+    .map((line) => ({
+      line,
+      pace28: paceAtWindow(books, line.wine, 28),
+      pace90: paceAtWindow(books, line.wine, 90),
+      pace180: paceAtWindow(books, line.wine, 180),
+    }))
+}
+
+function sortKeyForWindow(days: number): SortKey {
+  if (days === 28) return "days28"
+  if (days === 90) return "days90"
+  return "days180"
+}
+
+function paceForSortKey(row: TableRow, key: SortKey): PaceAtWindow | null {
+  if (key === "days28") return row.pace28
+  if (key === "days90") return row.pace90
+  if (key === "days180") return row.pace180
+  return null
+}
+
 function defaultSortDir(key: SortKey): SortDir {
-  if (key === "product" || key === "days" || key === "status") return "asc"
+  if (key === "product" || key.startsWith("days") || key === "status") return "asc"
   return "desc"
 }
 
-function sortSupplyLines(lines: SupplyLine[], key: SortKey, dir: SortDir) {
+function sortTableRows(rows: TableRow[], key: SortKey, dir: SortDir) {
   const mul = dir === "asc" ? 1 : -1
-  return [...lines].sort((a, b) => {
-    if (dir === "desc") {
-      const paceOrder = compareNoPaceLast(a, b)
+  return [...rows].sort((a, b) => {
+    if (dir === "desc" && (key === "days28" || key === "days90" || key === "days180")) {
+      const paceOrder = compareNoPaceLast(
+        paceForSortKey(a, key)?.dailyRate ?? null,
+        paceForSortKey(b, key)?.dailyRate ?? null,
+      )
       if (paceOrder !== 0) return paceOrder
     }
-    return mul * compareSortKey(a, b, key) || a.wine.label.localeCompare(b.wine.label)
+    return mul * compareSortKey(a, b, key) || a.line.wine.label.localeCompare(b.line.wine.label)
   })
 }
 
 /** No sales in the pace window sorts after SKUs with pace when sorting high → low. */
-function compareNoPaceLast(a: SupplyLine, b: SupplyLine) {
-  const aNoPace = !hasSalesPace(a)
-  const bNoPace = !hasSalesPace(b)
+function compareNoPaceLast(aRate: number | null, bRate: number | null) {
+  const aNoPace = aRate === null || aRate <= 0
+  const bNoPace = bRate === null || bRate <= 0
   if (aNoPace === bNoPace) return 0
   return aNoPace ? 1 : -1
 }
 
-function hasSalesPace(line: SupplyLine) {
-  return line.dailyRate !== null && line.dailyRate > 0
-}
-
-function compareSortKey(a: SupplyLine, b: SupplyLine, key: SortKey) {
+function compareSortKey(a: TableRow, b: TableRow, key: SortKey) {
   if (key === "product") {
-    return a.wine.label.localeCompare(b.wine.label) || a.wine.sku.localeCompare(b.wine.sku)
+    return (
+      a.line.wine.label.localeCompare(b.line.wine.label) ||
+      a.line.wine.sku.localeCompare(b.line.wine.sku)
+    )
   }
-  if (key === "available") return a.available - b.available
-  if (key === "sold") return a.shippedWindow - b.shippedWindow
-  if (key === "pace") return compareNullableNumber(a.dailyRate, b.dailyRate)
-  if (key === "days") return compareDaysRemaining(a, b)
-  return bandSortRank(daysOnHandBand(a)) - bandSortRank(daysOnHandBand(b))
+  if (key === "available") return a.line.available - b.line.available
+  if (key === "days28") return compareDaysRemaining(a.pace28.daysRemaining, b.pace28.daysRemaining)
+  if (key === "days90") return compareDaysRemaining(a.pace90.daysRemaining, b.pace90.daysRemaining)
+  if (key === "days180") return compareDaysRemaining(a.pace180.daysRemaining, b.pace180.daysRemaining)
+  const bandA = daysOnHandBandFromPace(a.line.available, a.pace28.dailyRate, a.pace28.daysRemaining)
+  const bandB = daysOnHandBandFromPace(b.line.available, b.pace28.dailyRate, b.pace28.daysRemaining)
+  return bandSortRank(bandA) - bandSortRank(bandB)
 }
 
-function compareDaysRemaining(a: SupplyLine, b: SupplyLine) {
-  const left = a.daysRemaining
-  const right = b.daysRemaining
+function compareDaysRemaining(left: number | null, right: number | null) {
   const leftMissing = left === null || !Number.isFinite(left)
   const rightMissing = right === null || !Number.isFinite(right)
   if (leftMissing !== rightMissing) return leftMissing ? 1 : -1
   if (leftMissing) return 0
   return (left as number) - (right as number)
-}
-
-function compareNullableNumber(left: number | null, right: number | null) {
-  const leftMissing = left === null || left <= 0
-  const rightMissing = right === null || right <= 0
-  if (leftMissing !== rightMissing) return leftMissing ? 1 : -1
-  if (leftMissing || left === null || right === null) return 0
-  return left - right
 }
 
 function bandSortRank(band: DaysOnHandBand) {

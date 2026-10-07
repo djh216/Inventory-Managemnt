@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { bottlesShippedInWindow, reorderAlerts, supplyLine } from "./supply"
+import { bottlesShippedInWindow, paceAtWindow, reorderAlerts, supplyLine } from "./supply"
 import type { Books, Wine } from "./types"
 
 function wine(overrides: Partial<Wine> = {}): Wine {
@@ -76,6 +76,17 @@ test("flags reorder when days remaining are inside partner lead time", () => {
   const line = supplyLine(start, start.wines[0], now)
   assert.equal(line.urgency, "critical")
   assert.ok(line.suggestedReorderBottles > 0)
+})
+
+test("computes days on hand per pace window", () => {
+  const now = new Date("2026-10-07T12:00:00.000Z")
+  const start = books()
+  start.stock[0].availableBottles = 900
+  start.movements[0].bottles = 280
+  const pace28 = paceAtWindow(start, start.wines[0], 28, now)
+  const pace90 = paceAtWindow(start, start.wines[0], 90, now)
+  assert.equal(pace28.daysRemaining, 90)
+  assert.equal(pace90.daysRemaining, 900 / (280 / 90))
 })
 
 test("muted wines are omitted from reorder alerts", () => {
