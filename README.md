@@ -27,12 +27,12 @@ Open [http://127.0.0.1:4317](http://127.0.0.1:4317).
 
 ## Cloud Agent environment
 
-This repo includes a [Cloud Agent](https://cursor.com/docs/cloud-agent) environment in [`.cursor/environment.json`](.cursor/environment.json):
+This **GitHub repository** is the source of truth for Cloud Agent setup. Configuration lives in [`.cursor/environment.json`](.cursor/environment.json):
 
 - **install** — `npm ci`
-- **start** — launches `npm run dev` (port **4317**) in tmux via [`.cursor/start-dev.sh`](.cursor/start-dev.sh)
+- **start** — `bash .cursor/start-dev.sh` (Next.js dev server on port **4317** in tmux)
 
-Link the environment to this GitHub repository in Cursor so new agents boot with dependencies installed and the dev server running.
+In Cursor **Environment** settings, connect **`github.com/djh216/Inventory-Managemnt`** (not an Origin-only mirror). Use **repository-managed** config with path **`.cursor/environment.json`**, then run a **build** from the **`main`** branch and activate it. Agents will read install/start scripts from this repo on each boot.
 
 Data lives in `data/books.json` (local). The baseline upload is `data/inventory-upload.csv`. **Restore upload** re-imports the CSV.
 
