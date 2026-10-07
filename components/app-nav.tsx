@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { resetBooks } from "@/lib/actions"
+import { SidebarOrderHistory } from "@/components/sidebar-order-history"
 import { NavFrame } from "@/components/nav-frame"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,9 +17,32 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-export function AppNav({ alertCount = 0 }: { alertCount?: number }) {
+export function AppNav({
+  alertCount = 0,
+  orderLineCount = 0,
+  orderHistoryImportedAt = null,
+  salesPaceWindowDays = 30,
+}: {
+  alertCount?: number
+  orderLineCount?: number
+  orderHistoryImportedAt?: string | null
+  salesPaceWindowDays?: number
+}) {
   const pathname = usePathname()
-  return <NavFrame pathname={pathname} footer={<RestoreBooks />} alertCount={alertCount} />
+  return (
+    <NavFrame
+      pathname={pathname}
+      footer={<RestoreBooks />}
+      alertCount={alertCount}
+      orderHistoryPanel={
+        <SidebarOrderHistory
+          orderLineCount={orderLineCount}
+          orderHistoryImportedAt={orderHistoryImportedAt}
+          salesPaceWindowDays={salesPaceWindowDays}
+        />
+      }
+    />
+  )
 }
 
 function RestoreBooks() {

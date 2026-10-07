@@ -7,7 +7,8 @@ import { importOrderHistoryCsv } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-export function OrderHistoryUpload() {
+export function OrderHistoryUpload({ layout = "inline" }: { layout?: "inline" | "sidebar" }) {
+  const sidebar = layout === "sidebar"
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [pending, startTransition] = useTransition()
@@ -53,7 +54,14 @@ export function OrderHistoryUpload() {
   }
 
   return (
-    <form onSubmit={submit} encType="multipart/form-data" className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+    <form
+      onSubmit={submit}
+      encType="multipart/form-data"
+      className={cn(
+        "flex min-w-0 flex-col gap-2",
+        sidebar ? "gap-2" : "gap-3 sm:flex-row sm:items-center",
+      )}
+    >
       <div
         role="button"
         tabIndex={0}
@@ -71,15 +79,30 @@ export function OrderHistoryUpload() {
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
         className={cn(
-          "flex min-h-12 min-w-0 flex-1 cursor-pointer items-center rounded-lg border border-dashed px-4 py-3 transition-colors sm:py-2.5",
-          dragOver ? "border-primary bg-primary/5" : "border-border/80 bg-background hover:border-border hover:bg-muted/40",
+          "flex min-w-0 flex-1 cursor-pointer items-center rounded-lg border border-dashed px-3 py-2.5 transition-colors",
+          sidebar ? "min-h-16" : "min-h-12 px-4 py-3 sm:py-2.5",
+          dragOver
+            ? "border-primary bg-primary/5"
+            : sidebar
+              ? "border-sidebar-border bg-sidebar-accent/40 hover:bg-sidebar-accent/70"
+              : "border-border/80 bg-background hover:border-border hover:bg-muted/40",
         )}
       >
         <div className="min-w-0 text-left">
-          <p className="truncate text-sm text-foreground">
-            {pending ? "Uploading…" : fileName ? fileName : "Drop CSV here or click to browse"}
+          <p
+            className={cn(
+              "truncate",
+              sidebar ? "text-xs text-sidebar-foreground" : "text-sm text-foreground",
+            )}
+          >
+            {pending ? "Uploading…" : fileName ? fileName : "Drop CSV or browse"}
           </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p
+            className={cn(
+              "mt-0.5",
+              sidebar ? "text-[10px] text-sidebar-foreground/55" : "text-xs text-muted-foreground",
+            )}
+          >
             {fileName ? "Ready to upload" : "Outfield export or SKU · date · bottles"}
           </p>
         </div>
@@ -95,7 +118,7 @@ export function OrderHistoryUpload() {
           }}
         />
       </div>
-      <Button type="submit" disabled={pending || !fileName} className="shrink-0 sm:min-w-[7.5rem]">
+      <Button type="submit" disabled={pending || !fileName} className={cn("shrink-0", !sidebar && "sm:min-w-[7.5rem]")}>
         {pending ? "Uploading…" : "Upload"}
       </Button>
     </form>

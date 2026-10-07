@@ -1,12 +1,9 @@
 "use client"
 
-import { useMemo, useState, useTransition, type FormEvent } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
-import { OrderHistoryUpload } from "@/components/order-history-upload"
-import { clearOrderHistory, setSalesPaceWindow } from "@/lib/actions"
-import { formatCount, formatWhen, wineName } from "@/lib/format"
+import { SidebarOrderHistory } from "@/components/sidebar-order-history"
+import { formatCount, wineName } from "@/lib/format"
 import {
   DAYS_ON_HAND_TABLE_WINDOWS,
   daysOnHandBandFromPace,
@@ -22,9 +19,8 @@ import {
   type SupplyLine,
 } from "@/lib/supply"
 import type { Books } from "@/lib/types"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -56,17 +52,10 @@ type TableRow = {
   pace180: PaceAtWindow
 }
 
-const OUTFIELD_COLUMNS = [
-  "Lead Team Member",
-  "Account Name",
-  "Order Date",
-  "Line Item Product Variation Name",
-  "Line Item Quantity",
-] as const
-
 export function DaysOnHandView({ books }: { books: Books }) {
-  const windowDays = salesPaceWindowDays(books)
   const summary = daysOnHandSummary(books)
+  const orderLineCount = books.orderHistory?.length ?? 0
+  const paceWindowDays = salesPaceWindowDays(books)
   const rows = useMemo(() => buildTableRows(books), [books])
 
   const [query, setQuery] = useState("")
@@ -103,8 +92,6 @@ export function DaysOnHandView({ books }: { books: Books }) {
     setSortDir(defaultSortDir(key))
   }
 
-  const orderLineCount = books.orderHistory?.length ?? 0
-
   return (
     <div className="w-full space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -129,57 +116,12 @@ export function DaysOnHandView({ books }: { books: Books }) {
         <Kpi label="≤ 14 days on hand" value={String(summary.urgent)} detail="Low cover at current pace" />
       </section>
 
-      <section className="w-full rounded-xl bg-card ring-1 ring-foreground/10">
-        <div className="flex flex-col gap-3 border-b border-border px-5 py-4 md:flex-row md:items-start md:justify-between md:px-6 md:py-5">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-heading text-xl tracking-tight">Order history</h2>
-              {books.orderHistoryImportedAt ? (
-                <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
-                  {formatCount(orderLineCount)} lines · {formatWhen(books.orderHistoryImportedAt)}
-                </span>
-              ) : (
-                <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] text-muted-foreground">
-                  No file loaded
-                </span>
-              )}
-            </div>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Import sales history to calculate pace. Re-upload replaces the previous file; on-hand inventory is
-              unchanged.
-            </p>
-          </div>
-          <a
-            href="/order-history-template.csv"
-            download
-            className={buttonVariants({ variant: "outline", size: "sm", className: "shrink-0" })}
-          >
-            Download template
-          </a>
-        </div>
-
-        <div className="grid gap-5 px-5 py-4 md:px-6 md:py-5 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start lg:gap-8">
-          <OrderHistoryUpload />
-          <aside className="rounded-lg bg-muted/35 px-4 py-3 ring-1 ring-foreground/5">
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Reorder alerts</p>
-            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">Pace window for live inventory alerts (table uses 30 / 90 / 180).</p>
-            <PaceWindowForm key={windowDays} windowDays={windowDays} />
-            {orderLineCount > 0 ? (
-              <ClearHistoryButton className="mt-3 w-full justify-start px-0 text-muted-foreground hover:text-foreground" />
-            ) : null}
-          </aside>
-        </div>
-
-        <details className="border-t border-border px-5 py-3 text-sm text-muted-foreground md:px-6">
-          <summary className="cursor-pointer text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
-            Outfield column reference
-          </summary>
-          <ul className="mt-3 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-            {OUTFIELD_COLUMNS.map((column) => (
-              <li key={column}>{column}</li>
-            ))}
-          </ul>
-        </details>
+      <section className="rounded-xl bg-sidebar p-4 text-sidebar-foreground ring-1 ring-sidebar-border md:hidden">
+        <SidebarOrderHistory
+          orderLineCount={orderLineCount}
+          orderHistoryImportedAt={books.orderHistoryImportedAt ?? null}
+          salesPaceWindowDays={paceWindowDays}
+        />
       </section>
 
       <section className="flex flex-wrap items-center gap-3">
@@ -342,70 +284,6 @@ function Kpi({ label, value, detail }: { label: string; value: string; detail: s
       <p className="mt-2 font-heading text-3xl tracking-tight tabular-nums">{value}</p>
       <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
     </article>
-  )
-}
-
-function PaceWindowForm({ windowDays }: { windowDays: number }) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
-  const [value, setValue] = useState(String(windowDays))
-
-  function save(event: FormEvent) {
-    event.preventDefault()
-    startTransition(async () => {
-      const result = await setSalesPaceWindow(Number(value))
-      if (!result.ok) {
-        toast.error(result.error)
-        return
-      }
-      toast.success(result.message)
-      router.refresh()
-    })
-  }
-
-  return (
-    <form onSubmit={save} className="mt-2 flex items-center gap-2">
-      <Label htmlFor="pace-window" className="sr-only">
-        Pace window in days
-      </Label>
-      <Select value={value} onValueChange={(next) => setValue(next ?? String(windowDays))}>
-        <SelectTrigger id="pace-window" className="h-9 flex-1 bg-background">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="30">30 days</SelectItem>
-          <SelectItem value="60">60 days</SelectItem>
-          <SelectItem value="90">90 days</SelectItem>
-          <SelectItem value="180">180 days</SelectItem>
-        </SelectContent>
-      </Select>
-      <Button type="submit" size="sm" variant="secondary" disabled={pending || Number(value) === windowDays}>
-        {pending ? "…" : "Apply"}
-      </Button>
-    </form>
-  )
-}
-
-function ClearHistoryButton({ className }: { className?: string }) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
-
-  function clear() {
-    startTransition(async () => {
-      const result = await clearOrderHistory()
-      if (!result.ok) {
-        toast.error(result.error)
-        return
-      }
-      toast.success(result.message)
-      router.refresh()
-    })
-  }
-
-  return (
-    <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={clear} className={className}>
-      {pending ? "Clearing…" : "Clear uploaded orders"}
-    </Button>
   )
 }
 

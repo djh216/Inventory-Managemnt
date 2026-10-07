@@ -58,28 +58,43 @@ export function NavFrame({
   pathname,
   footer,
   alertCount = 0,
+  orderHistoryPanel,
 }: {
   pathname: string | null
   footer?: ReactNode
   alertCount?: number
+  orderHistoryPanel?: ReactNode
 }) {
+  const showOrderHistory = pathname === "/days-on-hand" || pathname?.startsWith("/days-on-hand/")
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex",
+          showOrderHistory ? "w-80" : "w-60",
+        )}
+      >
         <div className="h-1 bg-primary" />
         <div className="px-5 pt-6 pb-4">
           <p className="font-heading text-[2rem] leading-none tracking-tight">Inventory</p>
           <p className="mt-2 text-[11px] uppercase tracking-[0.22em] text-sidebar-foreground/55">
             Oct 6 upload
           </p>
-          <p className="mt-4 text-xs leading-5 text-sidebar-foreground/55">
-            Shipments drive depletion; reorder alerts fire when days of cover hit partner lead time.
-          </p>
+          {!showOrderHistory ? (
+            <p className="mt-4 text-xs leading-5 text-sidebar-foreground/55">
+              Shipments drive depletion; reorder alerts fire when days of cover hit partner lead time.
+            </p>
+          ) : null}
         </div>
-        <div className="px-3">
+        <div className="shrink-0 px-3">
           <NavLinks pathname={pathname} stacked alertCount={alertCount} />
         </div>
-        <div className="mt-auto space-y-3 border-t border-sidebar-border p-4">
+        {showOrderHistory && orderHistoryPanel ? (
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto border-t border-sidebar-border px-4 py-4">
+            {orderHistoryPanel}
+          </div>
+        ) : null}
+        <div className="mt-auto shrink-0 space-y-3 border-t border-sidebar-border p-4">
           <p className="text-[11px] leading-5 text-sidebar-foreground/55">
             Post shipments as orders, receive against winery POs, and tune lead time per wine in the catalog.
           </p>
