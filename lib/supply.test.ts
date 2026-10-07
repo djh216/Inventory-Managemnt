@@ -100,6 +100,18 @@ test("computes days on hand per pace window", () => {
   assert.equal(pace90.daysRemaining, 900 / (280 / 90))
 })
 
+test("days-on-hand dashboard uses on-hand bottles, not available", () => {
+  const now = new Date("2026-10-07T12:00:00.000Z")
+  const start = books()
+  start.stock[0].onHandBottles = 400
+  start.stock[0].availableBottles = 120
+  start.movements[0].bottles = 140
+  const availablePace = paceAtWindow(start, start.wines[0], 30, now, "available")
+  const onHandPace = paceAtWindow(start, start.wines[0], 30, now, "onHand")
+  assert.equal(availablePace.daysRemaining, 120 / (140 / 30))
+  assert.equal(onHandPace.daysRemaining, 400 / (140 / 30))
+})
+
 test("muted wines are omitted from reorder alerts", () => {
   const now = new Date("2026-10-07T12:00:00.000Z")
   const start = books(

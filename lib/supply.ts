@@ -43,19 +43,25 @@ export type PaceAtWindow = {
   daysRemaining: number | null
 }
 
+/** Which bottle count to divide by daily rate for days-on-hand style metrics. */
+export type DaysOnHandStockBasis = "available" | "onHand"
+
 export function paceAtWindow(
   books: Books,
   wine: Wine,
   windowDays: number,
   now = new Date(),
+  stockBasis: DaysOnHandStockBasis = "available",
 ): PaceAtWindow {
   const position = winePosition(books, wine.id)
+  const stock =
+    stockBasis === "onHand" ? position.onHand : position.free
   const shippedWindow = bottlesShippedInWindow(books, wine.id, windowDays, now)
   const dailyRate = shippedWindow > 0 ? shippedWindow / windowDays : null
   const daysRemaining =
     dailyRate && dailyRate > 0
-      ? position.free / dailyRate
-      : position.free > 0
+      ? stock / dailyRate
+      : stock > 0
         ? null
         : 0
   return { windowDays, shippedWindow, dailyRate, daysRemaining }
@@ -225,16 +231,22 @@ export function formatBottlesPerDayTable(rate: number | null) {
 export type DaysOnHandBand = "out" | "urgent" | "tight" | "comfortable" | "idle" | "unknown"
 
 export function daysOnHandBand(line: SupplyLine): DaysOnHandBand {
-  return daysOnHandBandFromPace(line.available, line.dailyRate, line.daysRemaining)
+  const daysRemaining =
+    line.dailyRate && line.dailyRate > 0
+      ? line.onHand / line.dailyRate
+      : line.onHand > 0
+        ? null
+        : 0
+  return daysOnHandBandFromPace(line.onHand, line.dailyRate, daysRemaining)
 }
 
 export function daysOnHandBandFromPace(
-  available: number,
+  stockBottles: number,
   dailyRate: number | null,
   daysRemaining: number | null,
 ): DaysOnHandBand {
-  if (available <= 0 && dailyRate && dailyRate > 0) return "out"
-  if (available <= 0) return "idle"
+  if (stockBottles <= 0 && dailyRate && dailyRate > 0) return "out"
+  if (stockBottles <= 0) return "idle"
   if (!dailyRate || dailyRate <= 0) return "unknown"
   if (daysRemaining === null) return "unknown"
   if (daysRemaining <= 14) return "urgent"
@@ -249,8 +261,8 @@ export function daysOnHandSummary(books: Books, now = new Date()) {
   let urgent = 0
   const pacedDays: number[] = []
   for (const line of lines) {
-    const pacePrimary = paceAtWindow(books, line.wine, VELOCITY_WINDOW_DAYS, now)
-    const band = daysOnHandBandFromPace(line.available, pacePrimary.dailyRate, pacePrimary.daysRemaining)
+    const pacePrimary = paceAtWindow(books, line.wine, VELOCITY_WINDOW_DAYS, now, "onHand")
+    const band = daysOnHandBandFromPace(line.onHand, pacePrimary.dailyRate, pacePrimary.daysRemaining)
     if (band === "unknown" || band === "idle") {
       withoutPace += 1
       continue
