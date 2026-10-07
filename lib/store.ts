@@ -1,6 +1,7 @@
 import fs from "fs"
 import path from "path"
 import { connection } from "next/server"
+import { producerFromProductName } from "@/lib/csv-import"
 import { seedBooks } from "@/lib/seed"
 import type { Books, Wine } from "@/lib/types"
 
@@ -8,7 +9,7 @@ const dataDir = path.join(process.cwd(), "data")
 const booksPath = path.join(dataDir, "books.json")
 const tempPath = `${booksPath}.tmp`
 
-function migrateBooks(books: Books): Books {
+export function migrateBooks(books: Books): Books {
   let changed = false
   const wines = books.wines.map((wine) => {
     const next = wine as Wine & {
@@ -17,21 +18,33 @@ function migrateBooks(books: Books): Books {
       targetDaysOfStock?: number
       reorderAlertsMuted?: boolean
     }
+    let current: Wine = wine
     if (
-      next.partner !== undefined &&
-      next.leadTimeDays !== undefined &&
-      next.targetDaysOfStock !== undefined &&
-      next.reorderAlertsMuted !== undefined
+      next.partner === undefined ||
+      next.leadTimeDays === undefined ||
+      next.targetDaysOfStock === undefined ||
+      next.reorderAlertsMuted === undefined
     ) {
-      return wine
+      changed = true
+      current = {
+        ...wine,
+        partner: next.partner ?? wine.producer,
+        leadTimeDays: next.leadTimeDays ?? 21,
+        targetDaysOfStock: next.targetDaysOfStock ?? 45,
+        reorderAlertsMuted: next.reorderAlertsMuted ?? false,
+      }
     }
+    if (!current.label) return current
+    const producer = producerFromProductName(current.label)
+    if (!producer || producer === current.producer) return current
     changed = true
+    const partnerWasDefault = !current.partner || current.partner === wine.producer
+    const supplierWasDefault = !current.supplier || current.supplier === wine.producer
     return {
-      ...wine,
-      partner: next.partner ?? wine.producer,
-      leadTimeDays: next.leadTimeDays ?? 21,
-      targetDaysOfStock: next.targetDaysOfStock ?? 45,
-      reorderAlertsMuted: next.reorderAlertsMuted ?? false,
+      ...current,
+      producer,
+      partner: partnerWasDefault ? producer : current.partner,
+      supplier: supplierWasDefault ? producer : current.supplier,
     }
   })
   let next: Books = changed ? { ...books, wines } : books

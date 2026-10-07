@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import { seedBooks } from "./seed"
-import { booksWithInventoryReset, booksWithoutOrderHistory } from "./store"
+import { booksWithInventoryReset, booksWithoutOrderHistory, migrateBooks } from "./store"
 import type { Books } from "./types"
 
 test("clearing inventory keeps the order history upload", () => {
@@ -87,4 +87,30 @@ test("clearing order history keeps inventory", () => {
   assert.deepEqual(next.orderHistory, [])
   assert.equal(next.orderHistoryImportedAt, null)
   assert.equal(current.orderHistory?.length, 1)
+})
+
+test("saved books take the producer from the product name", () => {
+  const books = seedBooks()
+  const pra = books.wines.find((wine) => wine.label.startsWith("Pra Amarone"))
+  const spinola = books.wines.find((wine) => wine.label.startsWith("Tenuta Santa Maria"))
+  assert.ok(pra)
+  assert.ok(spinola)
+  pra.producer = "Pra Amarone"
+  pra.partner = "Pra Amarone"
+  pra.supplier = "Pra Amarone"
+  spinola.producer = "Tenuta Santa"
+  spinola.partner = "House account"
+  spinola.supplier = "Tenuta Santa"
+
+  const next = migrateBooks(books)
+  const updatedPra = next.wines.find((wine) => wine.id === pra.id)
+  const updatedSpinola = next.wines.find((wine) => wine.id === spinola.id)
+
+  assert.equal(updatedPra?.producer, "Pra")
+  assert.equal(updatedPra?.partner, "Pra")
+  assert.equal(updatedPra?.supplier, "Pra")
+  assert.equal(updatedSpinola?.producer, "Tenuta Santa Maria")
+  assert.equal(updatedSpinola?.partner, "House account")
+  assert.equal(updatedSpinola?.supplier, "Tenuta Santa Maria")
+  assert.equal(books.wines.find((wine) => wine.id === pra.id)?.producer, "Pra Amarone")
 })

@@ -14,13 +14,23 @@ type CsvRow = {
 }
 
 const PRODUCER_PREFIXES = [
+  "Marchese Luca Spinola",
+  "Tenuta Santa Maria",
+  "Ottaviano Lambruschi",
   "Ciacci Piccolomini",
   "Domenico Clerico",
+  "Castell'In Villa",
   "E. Pira e Figli",
   "E Pira e Figli",
+  "Sasso di Sole",
+  "Cantine Leuci",
+  "Massimo Rivetti",
+  "Vigneti Radica",
+  "Santa Barbara",
+  "San Cassiano",
   "La Spinetta",
   "Bruno Rocca",
-  "San Cassiano",
+  "San Felo",
   "Castelfeder",
   "Avignonesi",
   "Contratto",
@@ -35,6 +45,8 @@ const PRODUCER_PREFIXES = [
   "Cocito",
   "Ciacci",
 ].sort((a, b) => b.length - a.length)
+
+const PRODUCT_NAME_HEADERS = ["label", "product name", "product", "wine name", "item name"]
 
 export function inventoryCsvPath() {
   return path.join(process.cwd(), "data", INVENTORY_UPLOAD_FILE)
@@ -51,13 +63,16 @@ export function parseInventoryCsv(text: string): { rows: CsvRow[] } | { error: s
     return { error: "The inventory file needs a header and at least one wine." }
   }
   const header = splitCsvFields(lines[0]).map((part) => part.trim().toLowerCase())
-  const headerMatches = INVENTORY_HEADER.every((name, index) => header[index] === name)
-  if (!headerMatches) {
-    return { error: "Use columns Label, SKU, Quantity On Hand, and Quantity Available." }
+  const labelIndex = header.findIndex((name) => PRODUCT_NAME_HEADERS.includes(name))
+  const skuIndex = header.findIndex((name) => name === "sku" || name === "product sku")
+  const onHandIndex = header.findIndex((name) => INVENTORY_HEADER[2] === name || name === "on hand")
+  const availableIndex = header.findIndex((name) => INVENTORY_HEADER[3] === name || name === "available")
+  if (labelIndex < 0 || skuIndex < 0 || onHandIndex < 0 || availableIndex < 0) {
+    return { error: "Use columns Product Name (or Label), SKU, Quantity On Hand, and Quantity Available." }
   }
   const rows: CsvRow[] = []
   for (let index = 1; index < lines.length; index += 1) {
-    const row = parseCsvLine(lines[index])
+    const row = parseCsvLine(lines[index], labelIndex, skuIndex, onHandIndex, availableIndex)
     if (!row) continue
     rows.push(row)
   }
@@ -92,14 +107,19 @@ function splitCsvFields(line: string) {
   return parts
 }
 
-function parseCsvLine(line: string): CsvRow | null {
+function parseCsvLine(
+  line: string,
+  labelIndex = 0,
+  skuIndex = 1,
+  onHandIndex = 2,
+  availableIndex = 3,
+): CsvRow | null {
   const parts = splitCsvFields(line)
-  if (parts.length < 4) return null
-  const label = parts[0].trim()
+  const label = parts[labelIndex]?.trim() ?? ""
   if (!label) return null
-  const sku = parts[1].trim()
-  const onHand = parseQuantity(parts[2])
-  const available = parseQuantity(parts[3])
+  const sku = parts[skuIndex]?.trim() ?? ""
+  const onHand = parseQuantity(parts[onHandIndex] ?? "")
+  const available = parseQuantity(parts[availableIndex] ?? "")
   if (onHand === null || available === null) return null
   return { label, sku, onHand, available }
 }
@@ -247,11 +267,8 @@ function parseLabel(label: string): ParsedLabel {
   working = working.replace(/\bNV\b/i, "").trim()
 
   const producer = detectProducer(working)
-  let cuvee = working
-  if (working.toLowerCase().startsWith(producer.toLowerCase())) {
-    cuvee = working.slice(producer.length).trim().replace(/^[-–—]\s*/, "")
-  }
-  if (!cuvee) cuvee = working
+  const cuveeFromName = cuveeAfterProducer(working, producer)
+  const cuvee = cuveeFromName || working
 
   const appellation = detectAppellation(working)
   const region = detectRegion(working, appellation)
@@ -275,19 +292,34 @@ function parseLabel(label: string): ParsedLabel {
   }
 }
 
-function detectProducer(label: string) {
-  for (const prefix of PRODUCER_PREFIXES) {
-    if (label.toLowerCase().startsWith(prefix.toLowerCase())) return prefix
-  }
-  const words = label.split(/\s+/)
-  if (words.length >= 2 && /^[A-Z]/.test(words[1]) && !isWineWord(words[1])) {
-    return `${words[0]} ${words[1]}`
-  }
-  return words[0] ?? label
+export function producerFromProductName(label: string) {
+  return parseLabel(label).producer
 }
 
-function isWineWord(word: string) {
-  return /^(di|del|della|de|da|DOCG|DOC|IGT|DOP|Bianco|Rosso|Brunello|Barolo|Barbaresco)$/i.test(word)
+function detectProducer(label: string) {
+  const normalized = normalizeProducerKey(label)
+  for (const prefix of PRODUCER_PREFIXES) {
+    const key = normalizeProducerKey(prefix)
+    if (normalized === key || normalized.startsWith(`${key} `)) return prefix
+  }
+  const first = label.trim().split(/\s+/)[0]
+  return first || label
+}
+
+function cuveeAfterProducer(label: string, producer: string) {
+  const tokens = label.trim().split(/\s+/)
+  const producerTokens = producer.trim().split(/\s+/).length
+  return tokens.slice(producerTokens).join(" ").replace(/^[-–—]\s*/, "").trim()
+}
+
+function normalizeProducerKey(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’‘`']/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase()
 }
 
 function detectFormatMl(label: string) {
