@@ -23,11 +23,11 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: {
-    default: "Marlow & Vine",
-    template: "%s · Marlow & Vine",
+    default: "Wine inventory",
+    template: "%s · Wine inventory",
   },
   description:
-    "Inventory desk for Marlow & Vine, a Northern California wine distributor. Track cases on the floor, holds, and postings across three houses.",
+    "Inventory desk built from the Oct 6, 2026 upload. Track on-hand bottles, available quantity, commitments, and postings.",
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

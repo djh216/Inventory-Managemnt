@@ -9,12 +9,11 @@ import {
   formatAbv,
   formatBottleSize,
   formatBottles,
-  formatMoney,
-  formatPercent,
+  formatCount,
   formatWhen,
   MOVEMENT_LABEL,
 } from "@/lib/format"
-import { costOf, fullestFreeLocation, lineAt, priceOf, statusFor, winePosition } from "@/lib/inventory"
+import { fullestFreeLocation, lineAt, statusFor, winePosition } from "@/lib/inventory"
 import type { Books, PostingPreset, Wine } from "@/lib/types"
 import { ColorMark, StatusPill } from "@/components/marks"
 import { Button } from "@/components/ui/button"
@@ -32,8 +31,6 @@ export function WineDetail({
 }) {
   const position = winePosition(books, wine.id)
   const status = statusFor(wine, position.free)
-  const margin =
-    wine.pricePerCase === 0 ? 0 : (wine.pricePerCase - wine.costPerCase) / wine.pricePerCase
   const preferredHouse = fullestFreeLocation(books, wine.id)
   const recent = books.movements
     .filter((movement) => movement.wineId === wine.id)
@@ -47,10 +44,7 @@ export function WineDetail({
           <p className="font-mono text-[11px] tracking-wide text-muted-foreground">{wine.sku}</p>
           <StatusPill status={status} />
         </div>
-        <h2 className="mt-1 font-heading text-2xl leading-tight tracking-tight">{wine.producer}</h2>
-        <p className="text-sm text-muted-foreground">
-          {wine.cuvee} {wine.vintage ?? "NV"}
-        </p>
+        <h2 className="mt-1 font-heading text-xl leading-snug tracking-tight">{wine.label || `${wine.producer} ${wine.cuvee}`}</h2>
         <p className="mt-2 text-sm">
           {wine.appellation}
           <span className="text-muted-foreground"> · {wine.region}, {wine.country}</span>
@@ -66,14 +60,13 @@ export function WineDetail({
       </div>
 
       <dl className="grid grid-cols-3 gap-2 text-sm">
-        <Stat label="Cost" value={formatMoney(wine.costPerCase)} />
-        <Stat label="Wholesale" value={formatMoney(wine.pricePerCase)} />
-        <Stat label="Margin" value={formatPercent(margin)} />
+        <Stat label="On hand" value={formatCount(position.onHand)} />
+        <Stat label="Available" value={formatCount(position.free)} />
+        <Stat label="Committed" value={formatCount(position.allocated)} />
       </dl>
-      <p className="text-xs text-muted-foreground">
-        On the book: {formatMoney(costOf(wine, position.onHand))} at cost,{" "}
-        {formatMoney(priceOf(wine, position.onHand))} at wholesale. Supplier {wine.supplier}.
-      </p>
+      {wine.supplier ? (
+        <p className="text-xs text-muted-foreground">Supplier {wine.supplier}</p>
+      ) : null}
       {wine.note ? <p className="text-sm leading-6">{wine.note}</p> : null}
 
       <div>

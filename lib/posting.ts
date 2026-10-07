@@ -1,4 +1,5 @@
 import { wineName, formatBottles } from "./format"
+import { lineFree } from "./inventory"
 import type {
   Books,
   CreateWineInput,
@@ -109,7 +110,7 @@ export function applyPosting(
   const next = structuredClone(books)
   const nextWine = next.wines.find((item) => item.id === wine.id)!
   const source = upsert(next.stock, wine.id, from.id)
-  const free = source.onHandBottles - source.allocatedBottles
+  const free = lineFree(source)
   const name = wineName(nextWine)
   const qtyLabel = formatBottles(bottles, wine.bottlesPerCase)
 
@@ -127,6 +128,7 @@ export function applyPosting(
 
   if (input.type === "receive") {
     source.onHandBottles += bottles
+    if (source.availableBottles !== undefined) source.availableBottles += bottles
     next.movements.push(movement)
     return {
       ok: true,
@@ -140,6 +142,7 @@ export function applyPosting(
       return fail(shipBlock(from.name, free, source.allocatedBottles, wine.bottlesPerCase))
     }
     source.onHandBottles -= bottles
+    if (source.availableBottles !== undefined) source.availableBottles -= bottles
     next.movements.push(movement)
     return {
       ok: true,
@@ -155,6 +158,7 @@ export function applyPosting(
       )
     }
     source.allocatedBottles += bottles
+    if (source.availableBottles !== undefined) source.availableBottles -= bottles
     next.movements.push(movement)
     return {
       ok: true,
@@ -170,6 +174,7 @@ export function applyPosting(
       )
     }
     source.allocatedBottles -= bottles
+    if (source.availableBottles !== undefined) source.availableBottles += bottles
     next.movements.push(movement)
     return {
       ok: true,
@@ -190,8 +195,11 @@ export function applyPosting(
       )
     }
     source.onHandBottles -= bottles
+    if (source.availableBottles !== undefined) source.availableBottles -= bottles
     const target = upsert(next.stock, wine.id, destination.id)
     target.onHandBottles += bottles
+    if (target.availableBottles !== undefined) target.availableBottles += bottles
+    else if (source.availableBottles !== undefined) target.availableBottles = bottles
     movement.toLocationId = destination.id
     next.movements.push(movement)
     return {
@@ -214,6 +222,7 @@ export function applyPosting(
     )
   }
   source.onHandBottles += delta
+  if (source.availableBottles !== undefined) source.availableBottles += delta
   movement.bottles = delta
   next.movements.push(movement)
   const verb = direction === "up" ? "Added" : "Removed"
@@ -315,6 +324,7 @@ export function applyCreateWine(
   const wine: Wine = {
     id: wineId,
     sku,
+    label: input.vintage ? `${producer} ${cuvee} ${input.vintage}` : `${producer} ${cuvee} NV`,
     producer,
     cuvee,
     vintage: input.vintage,

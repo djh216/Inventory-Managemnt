@@ -38,9 +38,15 @@ const percentFormat = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 })
 
-export function wineName(wine: Pick<Wine, "producer" | "cuvee" | "vintage">) {
+export function wineName(wine: Pick<Wine, "label" | "producer" | "cuvee" | "vintage">) {
+  if (wine.label?.trim()) return wine.label.trim()
   const vintage = wine.vintage ? String(wine.vintage) : "NV"
   return `${wine.producer} ${wine.cuvee} ${vintage}`
+}
+
+export function formatMoneyOptional(amount: number) {
+  if (!amount) return "—"
+  return formatMoney(amount)
 }
 
 export function formatBottles(bottles: number, perCase: number) {
@@ -56,6 +62,10 @@ export function formatBottles(bottles: number, perCase: number) {
 
 export function formatCases(cases: number) {
   return casesFormat.format(Math.round(cases * 10) / 10)
+}
+
+export function formatCount(value: number) {
+  return new Intl.NumberFormat("en-US").format(Math.round(value))
 }
 
 export function formatMoney(amount: number) {

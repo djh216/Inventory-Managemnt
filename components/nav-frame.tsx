@@ -51,12 +51,12 @@ export function NavFrame({
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
         <div className="h-1 bg-primary" />
         <div className="px-5 pt-6 pb-4">
-          <p className="font-heading text-[2rem] leading-none tracking-tight">Marlow</p>
+          <p className="font-heading text-[2rem] leading-none tracking-tight">Inventory</p>
           <p className="mt-2 text-[11px] uppercase tracking-[0.22em] text-sidebar-foreground/55">
-            & Vine
+            Oct 6 upload
           </p>
           <p className="mt-4 text-xs leading-5 text-sidebar-foreground/55">
-            Northern California wholesale
+            Wine distribution book from Cursor Initial Inventory Upload 10.6.26.csv
           </p>
         </div>
         <div className="px-3">
@@ -64,7 +64,7 @@ export function NavFrame({
         </div>
         <div className="mt-auto space-y-3 border-t border-sidebar-border p-4">
           <p className="text-[11px] leading-5 text-sidebar-foreground/55">
-            Oakland bonded, Napa cold room, and Fillmore will-call. The sample cellar lives on this machine.
+            Postings update `data/books.json` on this machine. Restore upload resets to the CSV baseline.
           </p>
           {footer}
         </div>
@@ -73,9 +73,9 @@ export function NavFrame({
         <div className="h-1 bg-primary" />
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div>
-            <p className="font-heading text-2xl leading-none">Marlow</p>
+            <p className="font-heading text-2xl leading-none">Inventory</p>
             <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/55">
-              & Vine
+              Oct 6 upload
             </p>
           </div>
           {footer}

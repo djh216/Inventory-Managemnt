@@ -17,6 +17,8 @@ export type LocationKind = (typeof LOCATION_KINDS)[number]
 export type Wine = {
   id: string
   sku: string
+  /** Full label from the inventory upload. */
+  label: string
   producer: string
   cuvee: string
   vintage: number | null
@@ -49,6 +51,8 @@ export type StockLine = {
   locationId: string
   onHandBottles: number
   allocatedBottles: number
+  /** When set (CSV import), available quantity is tracked explicitly. */
+  availableBottles?: number
 }
 
 export type Movement = {

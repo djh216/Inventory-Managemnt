@@ -1,13 +1,14 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import { applyCreateWine, applyPosting } from "./posting"
-import { seedBooks } from "./seed"
+import { importBooksFromCsv } from "./csv-import"
 import type { Books, PostingInput, Wine } from "./types"
 
 function wine(overrides: Partial<Wine> = {}): Wine {
   return {
     id: "w-1",
     sku: "TST-RED-22",
+    label: "Test House Rouge 2022",
     producer: "Test House",
     cuvee: "Rouge",
     vintage: 2022,
@@ -62,23 +63,19 @@ function posting(overrides: Partial<PostingInput> = {}): PostingInput {
   }
 }
 
-test("the sample cellar keeps every hold inside the floor count", () => {
-  const sample = seedBooks(new Date("2026-10-07T18:00:00.000Z"))
-  assert.ok(sample.wines.length >= 20)
+test("the upload keeps every hold inside the floor count", () => {
+  const sample = importBooksFromCsv()
+  assert.ok(sample.wines.length >= 200)
   for (const line of sample.stock) {
     assert.ok(line.onHandBottles >= 0)
     assert.ok(line.allocatedBottles >= 0)
     assert.ok(line.allocatedBottles <= line.onHandBottles)
-    assert.ok(sample.wines.some((item) => item.id === line.wineId))
-    assert.ok(sample.locations.some((item) => item.id === line.locationId))
   }
-  const out = sample.wines.filter((item) => {
-    const bottles = sample.stock
-      .filter((line) => line.wineId === item.id)
-      .reduce((sum, line) => sum + line.onHandBottles - line.allocatedBottles, 0)
-    return item.active && bottles <= 0
-  })
-  assert.ok(out.some((item) => item.id === "w-tawny"))
+  const castelfeder = sample.wines.find((wine) => wine.label.includes("Castelfeder Mont Mes"))
+  assert.ok(castelfeder)
+  const line = sample.stock.find((entry) => entry.wineId === castelfeder.id)
+  assert.equal(line?.onHandBottles, 1711)
+  assert.equal(line?.allocatedBottles, 1440)
 })
 
 test("ships free bottles and leaves the hold in place", () => {

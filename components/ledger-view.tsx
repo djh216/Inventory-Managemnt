@@ -73,7 +73,14 @@ export function LedgerView({
           aria-label="Search postings"
           className="lg:max-w-sm"
         />
-        <Select value={type} onValueChange={(value) => setType((value as MovementType | "all") ?? "all")}>
+        <Select
+          items={{
+            all: "All types",
+            ...Object.fromEntries(MOVEMENT_TYPES.map((item) => [item, MOVEMENT_LABEL[item]])),
+          }}
+          value={type}
+          onValueChange={(value) => setType((value as MovementType | "all") ?? "all")}
+        >
           <SelectTrigger className="w-full lg:w-40" aria-label="Posting type">
             <SelectValue />
           </SelectTrigger>
@@ -86,7 +93,14 @@ export function LedgerView({
             ))}
           </SelectContent>
         </Select>
-        <Select value={wineId} onValueChange={(value) => setWineId(value ?? "all")}>
+        <Select
+          items={{
+            all: "All wines",
+            ...Object.fromEntries(books.wines.map((wine) => [wine.id, wineName(wine)])),
+          }}
+          value={wineId}
+          onValueChange={(value) => setWineId(value ?? "all")}
+        >
           <SelectTrigger className="w-full lg:w-72" aria-label="Wine">
             <SelectValue placeholder="All wines" />
           </SelectTrigger>

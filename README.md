@@ -1,12 +1,18 @@
-# Marlow & Vine
+# Wine inventory desk
 
-Inventory desk for a Northern California wine distributor. The sample company buys from estates and sells by the case to restaurants and retailers. The book tracks what is on the floor, what is held for an account, and what is still free to sell.
+Inventory management built around **Cursor Initial Inventory Upload 10.6.26.csv** (276 SKUs).
 
-Three houses are on the book:
+The upload columns map directly to the book:
 
-- Oakland Bonded, the main warehouse
-- Napa Cold Room, for whites and anything that should stay cold
-- Fillmore Will-Call, the San Francisco pickup cage
+| CSV column | In the app |
+| --- | --- |
+| Label | Full product name in the catalog |
+| SKU | Product code (synthetic code if the file left SKU blank) |
+| Quantity On Hand | Bottles on the floor |
+| Quantity Available | Bottles free to sell |
+| On hand − available | **Committed** (held) quantity |
+
+All quantities are stored as **bottles**, matching the spreadsheet. The UI also shows case equivalents using each line’s case pack (usually 12; 3-packs use 3).
 
 ## Run it
 
@@ -17,14 +23,23 @@ npm run dev
 
 Open [http://127.0.0.1:4317](http://127.0.0.1:4317).
 
-The first launch writes a sample cellar to `data/books.json`. That file stays on the machine and is not committed. Postings, new wines, and reorder points are saved there. **Restore sample** in the sidebar puts the original cellar back.
+On first launch, the app imports `data/inventory-upload.csv` into `data/books.json` (local only, not committed). Postings and new wines are saved there. **Restore upload** in the sidebar re-imports the CSV and clears local postings.
 
-## What you can do
+## Sections
 
-- Read the morning desk: cases on the floor, free to sell, value, and lines under their reorder point.
-- Search the catalog by producer, cuvée, SKU, or appellation, and filter by color or country.
-- Add a wine. An opening count posts as a receipt.
-- Receive, ship, hold, release, transfer, and correct a count. A shipment can only take bottles that are free; held bottles stay until the hold is released.
-- Read the ledger of recent postings. The floor count is the book balance. The ledger is the activity behind it, not a reconstruction from an empty warehouse.
+- **Desk** — totals for on hand, available, committed, and largest commitments from the upload.
+- **Catalog** — search and filter the full label list; post receipts, shipments, holds, and counts.
+- **Stock** — same quantities by warehouse (single **Main inventory** location from the upload).
+- **Ledger** — activity after import (empty until you post).
 
-Quantities are stored in bottles and shown in cases, using each wine’s case pack (12, or 6 for Champagne and Port).
+## Replace the upload
+
+Replace `data/inventory-upload.csv` with a new export using the same column headers, then click **Restore upload** or delete `data/books.json` and restart.
+
+## Tests
+
+```bash
+npx tsc --noEmit
+npx eslint app components lib --max-warnings 0
+npx tsx --test lib/csv-import.test.ts lib/posting.test.ts
+```

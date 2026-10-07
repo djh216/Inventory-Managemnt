@@ -23,9 +23,17 @@ export function readBooks(): Books {
   try {
     const raw = fs.readFileSync(booksPath, "utf8")
     const parsed: unknown = JSON.parse(raw)
-    if (isBooks(parsed)) return parsed
+    if (isBooks(parsed)) {
+      if (parsed.wines.length > 0 && !("label" in parsed.wines[0])) {
+        // Older local books from the demo cellar — rebuild from the CSV upload.
+        const seeded = seedBooks()
+        writeBooks(seeded)
+        return seeded
+      }
+      return parsed
+    }
   } catch {
-    // Missing or unreadable books fall through to the sample cellar.
+    // Missing or unreadable books fall through to the CSV upload.
   }
   const seeded = seedBooks()
   writeBooks(seeded)
@@ -43,8 +51,11 @@ export async function loadBooks() {
   return readBooks()
 }
 
-export function restoreSampleBooks() {
+export function restoreUploadBooks() {
   const books = seedBooks()
   writeBooks(books)
   return books
 }
+
+/** @deprecated Use restoreUploadBooks */
+export const restoreSampleBooks = restoreUploadBooks

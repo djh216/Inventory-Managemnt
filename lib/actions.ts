@@ -55,8 +55,8 @@ export async function resetBooks(): Promise<ActionResult> {
   try {
     restoreSampleBooks()
   } catch {
-    return { ok: false, error: "The sample books could not be restored." }
+    return { ok: false, error: "The upload could not be restored." }
   }
   revalidatePath("/", "layout")
-  return { ok: true, message: "Sample books restored." }
+  return { ok: true, message: "Upload restored from inventory-upload.csv." }
 }

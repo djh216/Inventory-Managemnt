@@ -46,19 +46,19 @@ function RestoreBooks() {
         className="h-auto px-2 text-xs text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
         onClick={() => setOpen(true)}
       >
-        Restore sample
+        Restore upload
       </Button>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Restore the sample books?</DialogTitle>
+          <DialogTitle>Restore the Oct 6 upload?</DialogTitle>
           <DialogDescription>
-            This replaces the cellar on this machine with the original sample: the wines, the floor counts, and the recent postings.
+            This replaces the book on this machine with a fresh import from data/inventory-upload.csv. Postings you made after the upload will be cleared.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>Keep my books</DialogClose>
           <Button onClick={restore} disabled={pending}>
-            {pending ? "Restoring…" : "Restore sample"}
+            {pending ? "Restoring…" : "Restore upload"}
           </Button>
         </DialogFooter>
       </DialogContent>

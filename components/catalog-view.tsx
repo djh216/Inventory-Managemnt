@@ -15,14 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { formatBottles, formatMoney } from "@/lib/format"
+import { formatCount, wineName } from "@/lib/format"
 import { COLOR_LABEL } from "@/lib/format"
 import { costOf, statusFor, winePosition } from "@/lib/inventory"
 import type { Books, PostingPreset, WineColor } from "@/lib/types"
 import { WINE_COLORS } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
-type SortKey = "producer" | "free" | "value" | "risk"
+type SortKey = "producer" | "free" | "value" | "risk" | "held"
 
 export function CatalogView({
   books,
@@ -36,7 +36,9 @@ export function CatalogView({
   const [query, setQuery] = useState("")
   const [color, setColor] = useState<WineColor | "all">("all")
   const [country, setCountry] = useState("all")
-  const [sort, setSort] = useState<SortKey>(initialSort === "risk" ? "risk" : "producer")
+  const initialSortKey: SortKey =
+    initialSort === "risk" ? "risk" : initialSort === "held" ? "held" : "producer"
+  const [sort, setSort] = useState<SortKey>(initialSortKey)
   const [trackedSort, setTrackedSort] = useState(initialSort)
   const [selectedId, setSelectedId] = useState<string | null>(initialWineId ?? null)
   const [trackedWine, setTrackedWine] = useState(initialWineId)
@@ -50,9 +52,9 @@ export function CatalogView({
     setTrackedWine(initialWineId)
     setSelectedId(initialWineId)
   }
-  if (initialSort === "risk" && initialSort !== trackedSort) {
+  if ((initialSort === "risk" || initialSort === "held") && initialSort !== trackedSort) {
     setTrackedSort(initialSort)
-    setSort("risk")
+    setSort(initialSort === "held" ? "held" : "risk")
   }
 
   useEffect(() => {
@@ -72,6 +74,7 @@ export function CatalogView({
       if (country !== "all" && wine.country !== country) return false
       if (!needle) return true
       const haystack = [
+        wine.label,
         wine.producer,
         wine.cuvee,
         wine.sku,
@@ -109,7 +112,7 @@ export function CatalogView({
           <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Catalog</p>
           <h1 className="mt-1 font-heading text-4xl tracking-tight">The book</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Every wine Marlow & Vine carries, with the bottles that are still free to sell.
+            Labels, SKUs, and bottle counts from the Oct 6 upload. Available is what you can still sell; committed is on hand minus available.
           </p>
         </div>
         <Button
@@ -126,11 +129,18 @@ export function CatalogView({
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search producer, cuvée, SKU, appellation"
+          placeholder="Search label, SKU, producer, appellation"
           className="lg:max-w-sm"
           aria-label="Search the catalog"
         />
-        <Select value={country} onValueChange={(value) => setCountry(value ?? "all")}>
+        <Select
+          items={{
+            all: "All countries",
+            ...Object.fromEntries(countries.map((name) => [name, name])),
+          }}
+          value={country}
+          onValueChange={(value) => setCountry(value ?? "all")}
+        >
           <SelectTrigger className="w-full lg:w-44" aria-label="Country">
             <SelectValue placeholder="Country" />
           </SelectTrigger>
@@ -143,15 +153,24 @@ export function CatalogView({
             ))}
           </SelectContent>
         </Select>
-        <Select value={sort} onValueChange={(value) => setSort((value as SortKey) || "producer")}>
+        <Select
+          items={{
+            producer: "Producer",
+            free: "Free to sell",
+            value: "Value at cost",
+            risk: "Reorder risk",
+          }}
+          value={sort}
+          onValueChange={(value) => setSort((value as SortKey) || "producer")}
+        >
           <SelectTrigger className="w-full lg:w-44" aria-label="Sort">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="producer">Producer</SelectItem>
-            <SelectItem value="free">Free to sell</SelectItem>
-            <SelectItem value="value">Value at cost</SelectItem>
-            <SelectItem value="risk">Reorder risk</SelectItem>
+            <SelectItem value="free">Most available</SelectItem>
+            <SelectItem value="held">Most committed</SelectItem>
+            <SelectItem value="risk">Unavailable first</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground lg:ml-auto">
@@ -197,8 +216,8 @@ export function CatalogView({
                   <th className="px-4 py-3 font-medium">Wine</th>
                   <th className="px-2 py-3 font-medium">Appellation</th>
                   <th className="px-2 py-3 font-medium">On hand</th>
-                  <th className="px-2 py-3 font-medium">Free</th>
-                  <th className="px-2 py-3 font-medium">Price</th>
+                  <th className="px-2 py-3 font-medium">Available</th>
+                  <th className="px-2 py-3 font-medium">Committed</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
               </thead>
@@ -222,9 +241,9 @@ export function CatalogView({
                           className="text-left"
                           onClick={() => choose(wine.id)}
                         >
-                          <span className="font-medium">{wine.producer}</span>
-                          <span className="mt-0.5 block text-xs text-muted-foreground">
-                            {wine.cuvee} {wine.vintage ?? "NV"} · {wine.sku}
+                          <span className="font-medium line-clamp-2">{wineName(wine)}</span>
+                          <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
+                            {wine.sku}
                           </span>
                         </button>
                       </td>
@@ -234,13 +253,9 @@ export function CatalogView({
                           <ColorMark color={wine.color} />
                         </span>
                       </td>
-                      <td className="px-2 py-3 tabular-nums">
-                        {formatBottles(position.onHand, wine.bottlesPerCase)}
-                      </td>
-                      <td className="px-2 py-3 tabular-nums">
-                        {formatBottles(position.free, wine.bottlesPerCase)}
-                      </td>
-                      <td className="px-2 py-3 tabular-nums">{formatMoney(wine.pricePerCase)}</td>
+                      <td className="px-2 py-3 tabular-nums">{formatCount(position.onHand)}</td>
+                      <td className="px-2 py-3 tabular-nums">{formatCount(position.free)}</td>
+                      <td className="px-2 py-3 tabular-nums">{formatCount(position.allocated)}</td>
                       <td className="px-4 py-3">
                         <StatusPill status={statusFor(wine, position.free)} />
                       </td>
@@ -314,10 +329,16 @@ function compareWines(books: Books, a: Books["wines"][number], b: Books["wines"]
   if (sort === "value") {
     return costOf(b, right.onHand) - costOf(a, left.onHand) || a.producer.localeCompare(b.producer)
   }
-  if (sort === "risk") {
-    const risk = (wine: Books["wines"][number], free: number) =>
-      wine.active ? wine.reorderCases * wine.bottlesPerCase - free : Number.NEGATIVE_INFINITY
-    return risk(b, right.free) - risk(a, left.free) || a.producer.localeCompare(b.producer)
+  if (sort === "held") {
+    return right.allocated - left.allocated || (a.label || a.producer).localeCompare(b.label || b.producer)
   }
-  return a.producer.localeCompare(b.producer) || a.cuvee.localeCompare(b.cuvee) || (b.vintage ?? 0) - (a.vintage ?? 0)
+  if (sort === "risk") {
+    const risk = (_wine: Books["wines"][number], free: number, onHand: number) =>
+      free <= 0 && onHand > 0 ? onHand : free <= 0 ? -1 : 0
+    return (
+      risk(b, right.free, right.onHand) - risk(a, left.free, left.onHand) ||
+      (a.label || a.producer).localeCompare(b.label || b.producer)
+    )
+  }
+  return (a.label || a.producer).localeCompare(b.label || b.producer)
 }

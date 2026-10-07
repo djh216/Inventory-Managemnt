@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { MovementDialog } from "@/components/movement-dialog"
 import { StatusPill } from "@/components/marks"
 import { WineDetail } from "@/components/wine-detail"
-import { formatBottles } from "@/lib/format"
+import { formatBottles, formatCount } from "@/lib/format"
 import { fullestFreeLocation, lineAt, statusFor, winePosition } from "@/lib/inventory"
 import type { Books, PostingPreset } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -67,7 +67,7 @@ export function StockView({ books, initialHouse }: { books: Books; initialHouse?
         <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Stock</p>
         <h1 className="mt-1 font-heading text-4xl tracking-tight">Floor stock</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          On hand, on hold, and free to sell in each house. A shipment only draws from what is free.
+          Bottle counts from the upload: on hand, committed, and available. Shipments only draw from available bottles.
         </p>
       </header>
 
@@ -114,7 +114,7 @@ export function StockView({ books, initialHouse }: { books: Books; initialHouse?
                       {location.city}
                     </th>
                   ))}
-                  <th className="px-2 py-3 font-medium">Free</th>
+                  <th className="px-2 py-3 font-medium">Available</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
               </thead>
@@ -152,9 +152,7 @@ export function StockView({ books, initialHouse }: { books: Books; initialHouse?
                           </td>
                         )
                       })}
-                      <td className="px-2 py-3 tabular-nums">
-                        {formatBottles(position.free, wine.bottlesPerCase)}
-                      </td>
+                      <td className="px-2 py-3 tabular-nums">{formatCount(position.free)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-between gap-2">
                           <StatusPill status={statusFor(wine, position.free)} />

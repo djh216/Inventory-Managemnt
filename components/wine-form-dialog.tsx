@@ -48,6 +48,17 @@ type Draft = {
   openingCases: string
 }
 
+const FORMAT_ITEMS = {
+  "375": "375 ml",
+  "750": "750 ml",
+  "1500": "1.5 L",
+}
+
+const PACK_ITEMS = {
+  "12": "12 bottles",
+  "6": "6 bottles",
+}
+
 const emptyDraft = (locationId: string): Draft => ({
   producer: "",
   cuvee: "",
@@ -159,6 +170,7 @@ export function WineFormDialog({
             </Field>
             <Field label="Color">
               <Select
+                items={Object.fromEntries(WINE_COLORS.map((color) => [color, COLOR_LABEL[color]]))}
                 value={draft.color}
                 onValueChange={(value) => update("color", (value as WineColor | null) ?? null)}
               >
@@ -193,7 +205,11 @@ export function WineFormDialog({
               <Input value={draft.abv} inputMode="decimal" onChange={(event) => update("abv", event.target.value)} placeholder="13" />
             </Field>
             <Field label="Bottle">
-              <Select value={draft.formatMl} onValueChange={(value) => update("formatMl", value ?? "750")}>
+              <Select
+                items={FORMAT_ITEMS}
+                value={draft.formatMl}
+                onValueChange={(value) => update("formatMl", value ?? "750")}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -205,7 +221,11 @@ export function WineFormDialog({
               </Select>
             </Field>
             <Field label="Case pack">
-              <Select value={draft.bottlesPerCase} onValueChange={(value) => update("bottlesPerCase", value ?? "12")}>
+              <Select
+                items={PACK_ITEMS}
+                value={draft.bottlesPerCase}
+                onValueChange={(value) => update("bottlesPerCase", value ?? "12")}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -229,7 +249,11 @@ export function WineFormDialog({
             </Field>
           </div>
           <Field label="Opening house">
-            <Select value={draft.locationId} onValueChange={(value) => update("locationId", value ?? draft.locationId)}>
+            <Select
+              items={Object.fromEntries(books.locations.map((location) => [location.id, location.name]))}
+              value={draft.locationId}
+              onValueChange={(value) => update("locationId", value ?? draft.locationId)}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Choose a house" />
               </SelectTrigger>

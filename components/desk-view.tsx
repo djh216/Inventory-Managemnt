@@ -5,12 +5,11 @@ import Link from "next/link"
 import { buttonVariants } from "@/components/ui/button"
 import { Button } from "@/components/ui/button"
 import { MovementDialog } from "@/components/movement-dialog"
-import { StatusPill } from "@/components/marks"
 import { COLOR_LABEL } from "@/lib/format"
 import {
   formatBottles,
   formatCases,
-  formatMoney,
+  formatCount,
   formatWhen,
   MOVEMENT_LABEL,
   wineName,
@@ -25,6 +24,7 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
   const [preset, setPreset] = useState<PostingPreset | null>(null)
   const [session, setSession] = useState(0)
   const recent = [...books.movements].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6)
+  const unavailable = picture.reorderLines.filter((line) => line.free <= 0 && line.onHand > 0)
 
   function request(next: PostingPreset) {
     setPreset(next)
@@ -37,11 +37,10 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{today}</p>
-          <h1 className="mt-1 font-heading text-4xl tracking-tight">This morning&apos;s books</h1>
+          <h1 className="mt-1 font-heading text-4xl tracking-tight">Inventory desk</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Floor counts for the Oakland bonded warehouse, the Napa cold room, and Fillmore will-call.
-            {" "}
-            {picture.activeCount} active wines, {formatCases(picture.onHandCases)} cases on the floor.
+            Built from the Oct 6, 2026 upload ({formatCount(picture.skuCount)} SKUs). Quantities match the file:
+            on hand, available, and the difference treated as committed.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -54,24 +53,24 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Figure
-          label="On the floor"
-          value={`${formatCases(picture.onHandCases)} cs`}
-          detail={`${formatMoney(picture.costValue)} at cost`}
+          label="Quantity on hand"
+          value={formatCount(picture.onHandBottles)}
+          detail={`${formatCases(picture.onHandCases)} cases equivalent (12-bottle default)`}
         />
         <Figure
-          label="Free to sell"
-          value={`${formatCases(picture.freeCases)} cs`}
-          detail={`${formatCases(picture.allocatedCases)} cs held for accounts`}
+          label="Quantity available"
+          value={formatCount(picture.freeBottles)}
+          detail="Free to sell or ship"
         />
         <Figure
-          label="Wholesale value"
-          value={formatMoney(picture.priceValue)}
-          detail="If the free and held cases all sell"
+          label="Committed"
+          value={formatCount(picture.allocatedBottles)}
+          detail="On hand minus available from the upload"
         />
         <Figure
-          label="Needs a buy"
-          value={String(picture.reorderCount)}
-          detail={picture.reorderCount === 1 ? "Line under its reorder point" : "Lines under their reorder point"}
+          label="Unavailable SKUs"
+          value={String(unavailable.length)}
+          detail="On hand but nothing available to sell"
         />
       </section>
 
@@ -82,25 +81,21 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
             <Link
               key={house.location.id}
               href={`/stock?house=${house.location.id}`}
-              className="rounded-xl bg-card p-4 ring-1 ring-foreground/10 hover:ring-foreground/20"
+              className="rounded-xl bg-card p-4 ring-1 ring-foreground/10 hover:ring-foreground/20 lg:col-span-3"
             >
-              <div className="flex items-baseline justify-between gap-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <h2 className="font-heading text-xl tracking-tight">{house.location.name}</h2>
-                <p className="text-xs text-muted-foreground">{house.location.city}</p>
+                <p className="text-xs text-muted-foreground">Source: Cursor Initial Inventory Upload 10.6.26.csv</p>
               </div>
-              <p className="mt-3 font-heading text-2xl tabular-nums">{formatCases(house.cases)} cs</p>
-              <p className="text-xs text-muted-foreground">
-                {formatMoney(house.costValue)} at cost · {house.location.capacityCases.toLocaleString("en-US")} cs capacity
+              <p className="mt-3 font-heading text-2xl tabular-nums">
+                {formatCount(picture.onHandBottles)} bottles · {formatCases(house.cases)} cs eq.
               </p>
-              <div className="mt-3 h-1.5 rounded-full bg-muted">
+              <div className="mt-3 h-1.5 max-w-md rounded-full bg-muted">
                 <div
                   className={cn("h-full rounded-full", house.fill > 0.9 ? "bg-low" : "bg-healthy")}
                   style={{ width: `${width}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                {width}% of the house
-              </p>
             </Link>
           )
         })}
@@ -112,7 +107,7 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
             key={entry.color}
             className="rounded-full bg-card px-3 py-1 text-xs ring-1 ring-foreground/10"
           >
-            {COLOR_LABEL[entry.color]} · {formatCases(entry.cases)} cs
+            {COLOR_LABEL[entry.color]} · {formatCases(entry.cases)} cs eq.
           </span>
         ))}
       </section>
@@ -120,48 +115,40 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <div className="rounded-xl bg-card ring-1 ring-foreground/10">
           <div className="flex items-baseline justify-between gap-3 px-4 pt-4">
-            <h2 className="font-heading text-2xl tracking-tight">Needs a buy</h2>
-            <Link href="/catalog?sort=risk" className="text-xs underline-offset-2 hover:underline">
-              See them in the catalog
+            <h2 className="font-heading text-2xl tracking-tight">Largest commitments</h2>
+            <Link href="/catalog?sort=held" className="text-xs underline-offset-2 hover:underline">
+              See the catalog
             </Link>
           </div>
-          {picture.reorderLines.length === 0 ? (
+          {picture.heldLines.length === 0 ? (
             <p className="px-4 py-8 text-sm text-muted-foreground">
-              Every active wine is above its reorder point.
+              Every bottle in the upload is available.
             </p>
           ) : (
             <div className="mt-2 overflow-x-auto">
-              <table className="w-full min-w-[32rem] text-sm">
+              <table className="w-full min-w-[36rem] text-sm">
                 <thead className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                   <tr>
-                    <th className="px-4 py-2 font-medium">Wine</th>
-                    <th className="px-2 py-2 font-medium">Free</th>
-                    <th className="px-2 py-2 font-medium">Reorder</th>
-                    <th className="px-2 py-2 font-medium">Short</th>
-                    <th className="px-4 py-2 font-medium">Status</th>
+                    <th className="px-4 py-2 font-medium">Label</th>
+                    <th className="px-2 py-2 font-medium">On hand</th>
+                    <th className="px-2 py-2 font-medium">Available</th>
+                    <th className="px-2 py-2 font-medium">Committed</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {picture.reorderLines.map((line) => (
+                  {picture.heldLines.map((line) => (
                     <tr key={line.wine.id} className="border-t border-border">
                       <td className="px-4 py-3">
                         <Link href={`/catalog?wine=${line.wine.id}`} className="font-medium hover:underline">
-                          {line.wine.producer}
+                          {wineName(line.wine)}
                         </Link>
-                        <p className="text-xs text-muted-foreground">
-                          {line.wine.cuvee} {line.wine.vintage ?? "NV"}
-                        </p>
+                        <p className="font-mono text-[11px] text-muted-foreground">{line.wine.sku}</p>
                       </td>
                       <td className="px-2 py-3 tabular-nums">
-                        {formatBottles(line.free, line.wine.bottlesPerCase)}
+                        {formatCount(line.onHand)}
                       </td>
-                      <td className="px-2 py-3 tabular-nums">{line.wine.reorderCases} cs</td>
-                      <td className="px-2 py-3 tabular-nums">
-                        {formatBottles(line.short, line.wine.bottlesPerCase)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusPill status={line.status} />
-                      </td>
+                      <td className="px-2 py-3 tabular-nums">{formatCount(line.free)}</td>
+                      <td className="px-2 py-3 tabular-nums">{formatCount(line.allocated)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -178,29 +165,33 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
             </Link>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Recent activity. The floor count above is the book balance.
+            Activity after the upload. On-hand and available totals above stay the book balance.
           </p>
-          <ul className="mt-4 divide-y divide-border">
-            {recent.map((movement) => {
-              const wine = books.wines.find((item) => item.id === movement.wineId)
-              const house = books.locations.find((item) => item.id === movement.locationId)
-              if (!wine) return null
-              return (
-                <li key={movement.id} className="py-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <Link href={`/catalog?wine=${wine.id}`} className="font-medium hover:underline">
-                      {MOVEMENT_LABEL[movement.type]} · {wineName(wine)}
-                    </Link>
-                    <span className="shrink-0 text-xs text-muted-foreground">{formatWhen(movement.at)}</span>
-                  </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {formatBottles(Math.abs(movement.bottles), wine.bottlesPerCase)} · {house?.name}
-                    {movement.account ? ` · ${movement.account}` : ""} · {movement.reference}
-                  </p>
-                </li>
-              )
-            })}
-          </ul>
+          {recent.length === 0 ? (
+            <p className="mt-6 text-sm text-muted-foreground">No postings yet. Receipts and shipments will show here.</p>
+          ) : (
+            <ul className="mt-4 divide-y divide-border">
+              {recent.map((movement) => {
+                const wine = books.wines.find((item) => item.id === movement.wineId)
+                const house = books.locations.find((item) => item.id === movement.locationId)
+                if (!wine) return null
+                return (
+                  <li key={movement.id} className="py-3">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <Link href={`/catalog?wine=${wine.id}`} className="font-medium hover:underline">
+                        {MOVEMENT_LABEL[movement.type]} · {wineName(wine)}
+                      </Link>
+                      <span className="shrink-0 text-xs text-muted-foreground">{formatWhen(movement.at)}</span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {formatBottles(Math.abs(movement.bottles), wine.bottlesPerCase)} · {house?.name}
+                      {movement.account ? ` · ${movement.account}` : ""} · {movement.reference}
+                    </p>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
       </section>
 

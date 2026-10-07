@@ -10,15 +10,22 @@ export function lineAt(
   )
 }
 
+export function lineFree(line: StockLine) {
+  if (line.availableBottles !== undefined) return line.availableBottles
+  return line.onHandBottles - line.allocatedBottles
+}
+
 export function winePosition(books: Books, wineId: string) {
   let onHand = 0
   let allocated = 0
+  let free = 0
   for (const line of books.stock) {
     if (line.wineId !== wineId) continue
     onHand += line.onHandBottles
     allocated += line.allocatedBottles
+    free += lineFree(line)
   }
-  return { onHand, allocated, free: onHand - allocated }
+  return { onHand, allocated, free }
 }
 
 export function statusFor(wine: Wine, freeBottles: number): StockStatus {
@@ -49,7 +56,7 @@ export function fullestFreeLocation(books: Books, wineId: string) {
   let bestFree = -1
   for (const location of books.locations) {
     const line = lineAt(books, wineId, location.id)
-    const free = (line?.onHandBottles ?? 0) - (line?.allocatedBottles ?? 0)
+    const free = line ? lineFree(line) : 0
     if (free > bestFree) {
       bestFree = free
       best = location.id
@@ -82,15 +89,26 @@ export type ReorderLine = {
   short: number
 }
 
+export type HeldLine = {
+  wine: Wine
+  onHand: number
+  allocated: number
+  free: number
+}
+
 export function snapshot(books: Books) {
   let onHandCases = 0
   let freeCases = 0
   let allocatedCases = 0
   let costValue = 0
   let priceValue = 0
+  let onHandBottles = 0
+  let freeBottles = 0
+  let allocatedBottles = 0
   const colorCases = new Map<Wine["color"], number>()
   const houseCases = new Map<string, { cases: number; costValue: number }>()
   const reorderLines: ReorderLine[] = []
+  const heldLines: HeldLine[] = []
 
   for (const location of books.locations) {
     houseCases.set(location.id, { cases: 0, costValue: 0 })
@@ -104,6 +122,12 @@ export function snapshot(books: Books) {
     onHandCases += onHand
     freeCases += free
     allocatedCases += allocated
+    onHandBottles += position.onHand
+    freeBottles += position.free
+    allocatedBottles += position.allocated
+    if (position.allocated > 0) {
+      heldLines.push({ wine, ...position })
+    }
     costValue += costOf(wine, position.onHand)
     priceValue += priceOf(wine, position.onHand)
     colorCases.set(wine.color, (colorCases.get(wine.color) ?? 0) + onHand)
@@ -128,6 +152,7 @@ export function snapshot(books: Books) {
   }
 
   reorderLines.sort((a, b) => b.short - a.short || a.wine.producer.localeCompare(b.wine.producer))
+  heldLines.sort((a, b) => b.allocated - a.allocated || wineNameSort(a.wine, b.wine))
 
   const houses: HouseSnapshot[] = books.locations.map((location) => {
     const house = houseCases.get(location.id) ?? { cases: 0, costValue: 0 }
@@ -148,8 +173,16 @@ export function snapshot(books: Books) {
     costValue,
     priceValue,
     reorderCount: reorderLines.length,
+    onHandBottles,
+    freeBottles,
+    allocatedBottles,
     byColor: [...colorCases.entries()].map(([color, cases]) => ({ color, cases })),
     houses,
     reorderLines,
+    heldLines: heldLines.slice(0, 12),
   }
+}
+
+function wineNameSort(a: Wine, b: Wine) {
+  return (a.label || a.producer).localeCompare(b.label || b.producer)
 }

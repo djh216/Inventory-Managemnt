@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { postMovement } from "@/lib/actions"
 import { formatBottles, MOVEMENT_LABEL, wineName } from "@/lib/format"
-import { knownAccounts, lineAt } from "@/lib/inventory"
+import { knownAccounts, lineAt, lineFree } from "@/lib/inventory"
 import { applyPosting } from "@/lib/posting"
 import type { Books, MovementType, PostingInput, PostingPreset } from "@/lib/types"
 import { MOVEMENT_TYPES } from "@/lib/types"
@@ -113,7 +113,7 @@ export function MovementDialog({
   }
 
   const sourceLine = wine && locationId ? lineAt(books, wine.id, locationId) : undefined
-  const freeNow = sourceLine ? sourceLine.onHandBottles - sourceLine.allocatedBottles : null
+  const freeNow = sourceLine ? lineFree(sourceLine) : null
   const after = preview?.ok && wine && locationId
     ? preview.books.stock.find((line) => line.wineId === wine.id && line.locationId === locationId)
     : undefined
@@ -129,6 +129,7 @@ export function MovementDialog({
         <form onSubmit={submit} className="grid gap-3">
           <Field label="Posting">
             <Select
+              items={Object.fromEntries(MOVEMENT_TYPES.map((item) => [item, MOVEMENT_LABEL[item]]))}
               value={type}
               onValueChange={(value) => {
                 if (value) setType(value as MovementType)
@@ -148,6 +149,7 @@ export function MovementDialog({
           </Field>
           <Field label="Wine">
             <Select
+              items={Object.fromEntries(books.wines.map((item) => [item.id, wineName(item)]))}
               value={wineId}
               onValueChange={(value) => setWineId(value)}
             >
@@ -167,7 +169,11 @@ export function MovementDialog({
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label={type === "transfer" ? "From" : "House"}>
-              <Select value={locationId} onValueChange={(value) => setLocationId(value)}>
+              <Select
+                items={Object.fromEntries(books.locations.map((location) => [location.id, location.name]))}
+                value={locationId}
+                onValueChange={(value) => setLocationId(value)}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Choose a house" />
                 </SelectTrigger>
@@ -182,7 +188,11 @@ export function MovementDialog({
             </Field>
             {type === "transfer" ? (
               <Field label="To">
-                <Select value={toLocationId} onValueChange={(value) => setToLocationId(value)}>
+                <Select
+                  items={Object.fromEntries(books.locations.map((location) => [location.id, location.name]))}
+                  value={toLocationId}
+                  onValueChange={(value) => setToLocationId(value)}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Choose a house" />
                   </SelectTrigger>
@@ -279,7 +289,7 @@ export function MovementDialog({
               {formatBottles(sourceLine?.allocatedBottles ?? 0, wine.bottlesPerCase)} held,{" "}
               {formatBottles(freeNow, wine.bottlesPerCase)} free.
               {preview?.ok && after
-                ? ` After this posting, ${formatBottles(after.onHandBottles - after.allocatedBottles, wine.bottlesPerCase)} will be free.`
+                ? ` After this posting, ${formatBottles(lineFree(after), wine.bottlesPerCase)} will be available.`
                 : ""}
             </p>
           ) : null}
