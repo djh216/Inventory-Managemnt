@@ -34,7 +34,20 @@ function migrateBooks(books: Books): Books {
       reorderAlertsMuted: next.reorderAlertsMuted ?? false,
     }
   })
-  return changed ? { ...books, wines } : books
+  let next: Books = changed ? { ...books, wines } : books
+  if (next.orderHistory === undefined) {
+    next = { ...next, orderHistory: [] }
+    changed = true
+  }
+  if (next.orderHistoryImportedAt === undefined) {
+    next = { ...next, orderHistoryImportedAt: null }
+    changed = true
+  }
+  if (next.salesPaceWindowDays === undefined) {
+    next = { ...next, salesPaceWindowDays: 28 }
+    changed = true
+  }
+  return changed ? next : books
 }
 
 function isBooks(value: unknown): value is Books {

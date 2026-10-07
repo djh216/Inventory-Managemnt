@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 
 const links = [
   { href: "/", label: "Live inventory", badge: true },
+  { href: "/days-on-hand", label: "Days on hand" },
   { href: "/orders", label: "Orders" },
   { href: "/catalog", label: "Catalog" },
   { href: "/stock", label: "Stock" },

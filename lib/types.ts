@@ -76,11 +76,26 @@ export type Movement = {
   note: string
 }
 
+/** Uploaded outbound orders — used for sales pace only (does not change on-hand). */
+export type OrderHistoryLine = {
+  id: string
+  at: string
+  wineId: string
+  bottles: number
+  account: string
+  reference: string
+}
+
 export type Books = {
   wines: Wine[]
   locations: Location[]
   stock: StockLine[]
   movements: Movement[]
+  /** CSV order history for sales-pace calculations. */
+  orderHistory?: OrderHistoryLine[]
+  orderHistoryImportedAt?: string | null
+  /** Rolling window for average daily sales (default 28). */
+  salesPaceWindowDays?: number
 }
 
 export type StockStatus = "healthy" | "low" | "out" | "idle"

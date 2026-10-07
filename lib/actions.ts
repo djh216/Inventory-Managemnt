@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache"
 import { applyCreateWine, applyPosting, applyReorder } from "@/lib/posting"
+import {
+  applyOrderHistoryImport,
+  parseOrderHistoryCsv,
+} from "@/lib/order-history-import"
 import { readBooks, restoreSampleBooks, writeBooks } from "@/lib/store"
 import type { ActionResult, CreateWineInput, PostingInput } from "@/lib/types"
 
@@ -96,6 +100,55 @@ export async function setReorder(wineId: string, reorderCases: number): Promise<
   const failed = persist(result.books)
   if (failed) return failed
   return { ok: true, message: result.message, wineId: result.wineId }
+}
+
+export async function importOrderHistoryCsv(formData: FormData): Promise<ActionResult> {
+  const file = formData.get("file")
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "Choose a CSV file to upload." }
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    return { ok: false, error: "Order history must be 8 MB or smaller." }
+  }
+  const text = await file.text()
+  const parsed = parseOrderHistoryCsv(text)
+  if ("error" in parsed) {
+    return { ok: false, error: parsed.error }
+  }
+  const result = applyOrderHistoryImport(readBooks(), parsed, new Date().toISOString())
+  if (!result.ok) return { ok: false, error: result.error }
+  const failed = persist(result.books)
+  if (failed) return failed
+  const unmatchedNote =
+    result.unmatched > 0
+      ? ` ${result.unmatched} row${result.unmatched === 1 ? "" : "s"} did not match a SKU.`
+      : ""
+  return {
+    ok: true,
+    message: `Imported ${result.imported} order lines for sales pace.${unmatchedNote}`,
+  }
+}
+
+export async function setSalesPaceWindow(days: number): Promise<ActionResult> {
+  if (!Number.isInteger(days) || days < 7 || days > 365) {
+    return { ok: false, error: "Pace window must be between 7 and 365 days." }
+  }
+  const books = readBooks()
+  const next = structuredClone(books)
+  next.salesPaceWindowDays = days
+  const failed = persist(next)
+  if (failed) return failed
+  return { ok: true, message: `Sales pace now uses the last ${days} days of orders.` }
+}
+
+export async function clearOrderHistory(): Promise<ActionResult> {
+  const books = readBooks()
+  const next = structuredClone(books)
+  next.orderHistory = []
+  next.orderHistoryImportedAt = null
+  const failed = persist(next)
+  if (failed) return failed
+  return { ok: true, message: "Uploaded order history cleared. Posted shipments still count toward pace." }
 }
 
 export async function resetBooks(): Promise<ActionResult> {

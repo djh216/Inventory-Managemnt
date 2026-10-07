@@ -17,7 +17,7 @@ import { fullestFreeLocation, lineAt, lineFree, winePosition } from "@/lib/inven
 import {
   formatDaysRemaining,
   supplyLine,
-  VELOCITY_WINDOW_DAYS,
+  salesPaceWindowDays,
 } from "@/lib/supply"
 import type { Books, PostingPreset, Wine } from "@/lib/types"
 import { ColorMark } from "@/components/marks"
@@ -36,6 +36,7 @@ export function WineDetail({
   onAction: (preset: PostingPreset) => void
 }) {
   const position = winePosition(books, wine.id)
+  const paceWindowDays = salesPaceWindowDays(books)
   const supply = supplyLine(books, wine)
   const preferredHouse = fullestFreeLocation(books, wine.id)
   const recent = books.movements
@@ -73,7 +74,7 @@ export function WineDetail({
       <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
         <Stat label="Daily orders" value={supply.dailyRate ? supply.dailyRate.toFixed(1) : "—"} />
         <Stat label="Days left" value={formatDaysRemaining(supply.daysRemaining)} />
-        <Stat label={`Shipped (${VELOCITY_WINDOW_DAYS}d)`} value={formatCount(supply.shippedWindow)} />
+        <Stat label={`Sold (${paceWindowDays}d)`} value={formatCount(supply.shippedWindow)} />
         <Stat label="Suggested PO" value={formatCount(supply.suggestedReorderBottles)} />
       </dl>
       <p className="text-xs text-muted-foreground">Winery partner: {wine.partner}</p>

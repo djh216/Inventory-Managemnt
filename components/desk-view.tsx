@@ -15,11 +15,12 @@ import {
   partnerRollups,
   reorderAlerts,
   snoozedReorderAlerts,
-  VELOCITY_WINDOW_DAYS,
+  salesPaceWindowDays,
 } from "@/lib/supply"
 import type { Books, PostingPreset } from "@/lib/types"
 
 export function DeskView({ books, today }: { books: Books; today: string }) {
+  const paceWindowDays = salesPaceWindowDays(books)
   const alerts = reorderAlerts(books)
   const snoozed = snoozedReorderAlerts(books)
   const partners = partnerRollups(books)
@@ -70,8 +71,8 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
         />
         <Figure
           label="Velocity window"
-          value={`${VELOCITY_WINDOW_DAYS} days`}
-          detail="Shipments in this window set daily depletion"
+          value={`${paceWindowDays} days`}
+          detail="Orders in this window set daily depletion"
         />
       </section>
 

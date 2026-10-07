@@ -147,6 +147,9 @@ export function booksFromUpload(rows: CsvRow[]): Books {
     locations: [location],
     stock,
     movements: [],
+    orderHistory: [],
+    orderHistoryImportedAt: null,
+    salesPaceWindowDays: 28,
   }
 }
 
