@@ -94,8 +94,28 @@ export async function loadBooks() {
   return readBooks()
 }
 
-export function restoreUploadBooks() {
-  const books = seedBooks()
+/** Re-import the inventory CSV while keeping the order-history upload and pace window. */
+export function booksWithInventoryReset(current: Books, uploaded: Books): Books {
+  return {
+    ...uploaded,
+    orderHistory: current.orderHistory ?? [],
+    orderHistoryImportedAt: current.orderHistoryImportedAt ?? null,
+    salesPaceWindowDays: current.salesPaceWindowDays ?? uploaded.salesPaceWindowDays,
+  }
+}
+
+/** Drop the order-history upload. Inventory, postings, and the pace window stay. */
+export function booksWithoutOrderHistory(current: Books): Books {
+  return {
+    ...current,
+    orderHistory: [],
+    orderHistoryImportedAt: null,
+  }
+}
+
+export function restoreUploadBooks(current?: Books) {
+  const prior = current ?? readBooks()
+  const books = booksWithInventoryReset(prior, seedBooks())
   writeBooks(books)
   return books
 }

@@ -5,6 +5,15 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { clearOrderHistory, setSalesPaceWindow } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -76,8 +85,15 @@ export function PaceWindowForm({
   )
 }
 
-export function ClearHistoryButton({ className }: { className?: string }) {
+export function ClearHistoryButton({
+  className,
+  disabled = false,
+}: {
+  className?: string
+  disabled?: boolean
+}) {
   const router = useRouter()
+  const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
 
   function clear() {
@@ -88,13 +104,37 @@ export function ClearHistoryButton({ className }: { className?: string }) {
         return
       }
       toast.success(result.message)
+      setOpen(false)
       router.refresh()
     })
   }
 
   return (
-    <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={clear} className={className}>
-      {pending ? "Clearing…" : "Clear uploaded orders"}
-    </Button>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={disabled || pending}
+        onClick={() => setOpen(true)}
+        className={className}
+      >
+        Clear order history
+      </Button>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Clear the order history upload?</DialogTitle>
+          <DialogDescription>
+            Uploaded order lines are removed. Inventory counts and posted shipments stay on the book.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline" />}>Keep order history</DialogClose>
+          <Button onClick={clear} disabled={pending}>
+            {pending ? "Clearing…" : "Clear order history"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

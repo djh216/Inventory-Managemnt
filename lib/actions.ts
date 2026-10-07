@@ -6,7 +6,7 @@ import {
   applyOrderHistoryImport,
   parseOrderHistoryCsv,
 } from "@/lib/order-history-import"
-import { readBooks, restoreSampleBooks, writeBooks } from "@/lib/store"
+import { booksWithoutOrderHistory, readBooks, restoreUploadBooks, writeBooks } from "@/lib/store"
 import type { ActionResult, CreateWineInput, PostingInput } from "@/lib/types"
 
 function persist(books: ReturnType<typeof readBooks>): ActionResult | null {
@@ -140,21 +140,23 @@ export async function setSalesPaceWindow(days: number): Promise<ActionResult> {
 }
 
 export async function clearOrderHistory(): Promise<ActionResult> {
-  const books = readBooks()
-  const next = structuredClone(books)
-  next.orderHistory = []
-  next.orderHistoryImportedAt = null
-  const failed = persist(next)
+  const failed = persist(booksWithoutOrderHistory(readBooks()))
   if (failed) return failed
-  return { ok: true, message: "Uploaded order history cleared. Posted shipments still count toward pace." }
+  return {
+    ok: true,
+    message: "Order history upload cleared. Inventory and posted shipments were left in place.",
+  }
 }
 
 export async function resetBooks(): Promise<ActionResult> {
   try {
-    restoreSampleBooks()
+    restoreUploadBooks(readBooks())
   } catch {
-    return { ok: false, error: "The upload could not be restored." }
+    return { ok: false, error: "The inventory upload could not be cleared." }
   }
   revalidatePath("/", "layout")
-  return { ok: true, message: "Upload restored from inventory-upload.csv." }
+  return {
+    ok: true,
+    message: "Inventory reset to the Oct 6 upload. Order history was left in place.",
+  }
 }
