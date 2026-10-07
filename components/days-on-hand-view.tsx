@@ -30,6 +30,8 @@ import {
 import { cn } from "@/lib/utils"
 
 type FilterBand = "all" | DaysOnHandBand
+type SortKey = "product" | "available" | "sold" | "pace" | "days" | "status"
+type SortDir = "asc" | "desc"
 
 const bandLabel: Record<DaysOnHandBand, string> = {
   out: "Out of stock",
@@ -53,22 +55,33 @@ export function DaysOnHandView({ books }: { books: Books }) {
   const windowDays = salesPaceWindowDays(books)
   const summary = daysOnHandSummary(books)
   const lines = useMemo(
-    () =>
-      supplyLines(books)
-        .filter((line) => line.wine.active)
-        .sort((a, b) => compareDaysOnHand(a, b)),
+    () => supplyLines(books).filter((line) => line.wine.active),
     [books],
   )
 
   const [query, setQuery] = useState("")
   const [band, setBand] = useState<FilterBand>("all")
+  const [sortKey, setSortKey] = useState<SortKey>("days")
+  const [sortDir, setSortDir] = useState<SortDir>("asc")
 
-  const filtered = lines.filter((line) => {
-    if (band !== "all" && daysOnHandBand(line) !== band) return false
-    if (!query.trim()) return true
-    const hay = `${line.wine.label} ${line.wine.sku} ${line.wine.producer}`.toLowerCase()
-    return hay.includes(query.trim().toLowerCase())
-  })
+  const filtered = useMemo(() => {
+    const rows = lines.filter((line) => {
+      if (band !== "all" && daysOnHandBand(line) !== band) return false
+      if (!query.trim()) return true
+      const hay = `${line.wine.label} ${line.wine.sku} ${line.wine.producer}`.toLowerCase()
+      return hay.includes(query.trim().toLowerCase())
+    })
+    return sortSupplyLines(rows, sortKey, sortDir)
+  }, [lines, band, query, sortKey, sortDir])
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((dir) => (dir === "asc" ? "desc" : "asc"))
+      return
+    }
+    setSortKey(key)
+    setSortDir(defaultSortDir(key))
+  }
 
   const orderLineCount = books.orderHistory?.length ?? 0
 
@@ -170,12 +183,44 @@ export function DaysOnHandView({ books }: { books: Books }) {
         <table className="w-full min-w-[56rem] text-sm">
           <thead className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 font-medium">Product</th>
-              <th className="px-2 py-3 font-medium">Available</th>
-              <th className="px-2 py-3 font-medium">Sold ({windowDays}d)</th>
-              <th className="px-2 py-3 font-medium">Daily pace</th>
-              <th className="px-2 py-3 font-medium">Days on hand</th>
-              <th className="px-4 py-3 font-medium">Status</th>
+              <SortableHeader
+                label="Product"
+                active={sortKey === "product"}
+                dir={sortDir}
+                onClick={() => toggleSort("product")}
+                className="px-4"
+              />
+              <SortableHeader
+                label="Available"
+                active={sortKey === "available"}
+                dir={sortDir}
+                onClick={() => toggleSort("available")}
+              />
+              <SortableHeader
+                label={`Sold (${windowDays}d)`}
+                active={sortKey === "sold"}
+                dir={sortDir}
+                onClick={() => toggleSort("sold")}
+              />
+              <SortableHeader
+                label="Daily pace"
+                active={sortKey === "pace"}
+                dir={sortDir}
+                onClick={() => toggleSort("pace")}
+              />
+              <SortableHeader
+                label="Days on hand"
+                active={sortKey === "days"}
+                dir={sortDir}
+                onClick={() => toggleSort("days")}
+              />
+              <SortableHeader
+                label="Status"
+                active={sortKey === "status"}
+                dir={sortDir}
+                onClick={() => toggleSort("status")}
+                className="px-4"
+              />
             </tr>
           </thead>
           <tbody>
@@ -300,11 +345,80 @@ function shipsInBooks(books: Books) {
   return books.movements.filter((movement) => movement.type === "ship").length
 }
 
-function compareDaysOnHand(a: SupplyLine, b: SupplyLine) {
-  const left = a.daysRemaining ?? Number.POSITIVE_INFINITY
-  const right = b.daysRemaining ?? Number.POSITIVE_INFINITY
-  const leftUnknown = a.dailyRate === null || a.dailyRate <= 0
-  const rightUnknown = b.dailyRate === null || b.dailyRate <= 0
-  if (leftUnknown !== rightUnknown) return leftUnknown ? 1 : -1
-  return left - right || a.wine.label.localeCompare(b.wine.label)
+function SortableHeader({
+  label,
+  active,
+  dir,
+  onClick,
+  className,
+}: {
+  label: string
+  active: boolean
+  dir: SortDir
+  onClick: () => void
+  className?: string
+}) {
+  return (
+    <th className={cn("px-2 py-2 font-medium", className)} aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "inline-flex items-center gap-1 rounded-sm text-left transition-colors hover:text-foreground",
+          active && "text-foreground",
+        )}
+      >
+        <span>{label}</span>
+        <span className="text-[10px] tabular-nums text-muted-foreground" aria-hidden>
+          {active ? (dir === "asc" ? "↑" : "↓") : "↕"}
+        </span>
+      </button>
+    </th>
+  )
+}
+
+function defaultSortDir(key: SortKey): SortDir {
+  if (key === "product" || key === "days" || key === "status") return "asc"
+  return "desc"
+}
+
+function sortSupplyLines(lines: SupplyLine[], key: SortKey, dir: SortDir) {
+  const mul = dir === "asc" ? 1 : -1
+  return [...lines].sort(
+    (a, b) => mul * compareSortKey(a, b, key) || a.wine.label.localeCompare(b.wine.label),
+  )
+}
+
+function compareSortKey(a: SupplyLine, b: SupplyLine, key: SortKey) {
+  if (key === "product") {
+    return a.wine.label.localeCompare(b.wine.label) || a.wine.sku.localeCompare(b.wine.sku)
+  }
+  if (key === "available") return a.available - b.available
+  if (key === "sold") return a.shippedWindow - b.shippedWindow
+  if (key === "pace") return compareNullableNumber(a.dailyRate, b.dailyRate)
+  if (key === "days") return compareDaysRemaining(a, b)
+  return bandSortRank(daysOnHandBand(a)) - bandSortRank(daysOnHandBand(b))
+}
+
+function compareDaysRemaining(a: SupplyLine, b: SupplyLine) {
+  const left = a.daysRemaining
+  const right = b.daysRemaining
+  const leftMissing = left === null || !Number.isFinite(left)
+  const rightMissing = right === null || !Number.isFinite(right)
+  if (leftMissing !== rightMissing) return leftMissing ? 1 : -1
+  if (leftMissing) return 0
+  return (left as number) - (right as number)
+}
+
+function compareNullableNumber(left: number | null, right: number | null) {
+  const leftMissing = left === null || left <= 0
+  const rightMissing = right === null || right <= 0
+  if (leftMissing !== rightMissing) return leftMissing ? 1 : -1
+  if (leftMissing || left === null || right === null) return 0
+  return left - right
+}
+
+function bandSortRank(band: DaysOnHandBand) {
+  const order: DaysOnHandBand[] = ["out", "urgent", "tight", "comfortable", "unknown", "idle"]
+  return order.indexOf(band)
 }
