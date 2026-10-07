@@ -41,7 +41,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Suspense fallback={<NavFrame pathname={null} />}>
             <AppNavLoader />
           </Suspense>
-          <main className="mx-auto w-full max-w-6xl px-4 py-5 md:px-8 md:py-8">{children}</main>
+          <main className="mx-auto w-full max-w-6xl px-4 py-5 has-[[data-page=wide]]:max-w-[min(112rem,calc(100vw-15rem))] md:px-8 md:py-8">
+            {children}
+          </main>
         </div>
         <Toaster position="top-center" />
       </body>

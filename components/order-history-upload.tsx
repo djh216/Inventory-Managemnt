@@ -50,7 +50,7 @@ export function OrderHistoryUpload({ compact }: { compact?: boolean }) {
   }
 
   return (
-    <form onSubmit={submit} encType="multipart/form-data" className={cn("min-w-[min(100%,20rem)]", compact && "w-full")}>
+    <form onSubmit={submit} encType="multipart/form-data" className={cn("w-full min-w-0", compact && "w-full")}>
       <div
         role="button"
         tabIndex={0}

@@ -86,7 +86,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
   const orderLineCount = books.orderHistory?.length ?? 0
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Sales pace</p>
@@ -109,8 +109,8 @@ export function DaysOnHandView({ books }: { books: Books }) {
         <Kpi label="≤ 14 days on hand" value={String(summary.urgent)} detail="Low cover at current pace" />
       </section>
 
-      <section className="rounded-xl bg-card p-4 ring-1 ring-foreground/10">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <section className="w-full rounded-xl bg-card p-5 ring-1 ring-foreground/10 md:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4 lg:gap-8">
           <div>
             <h2 className="font-heading text-xl tracking-tight">Order history upload</h2>
             <p className="mt-1 max-w-xl text-xs leading-5 text-muted-foreground">
@@ -137,7 +137,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
             Download template
           </a>
         </div>
-        <div className="mt-4 flex flex-wrap items-end gap-4">
+        <div className="mt-5 grid w-full gap-4 lg:grid-cols-[minmax(0,2fr)_auto_auto] lg:items-end">
           <OrderHistoryUpload />
           <PaceWindowForm key={windowDays} windowDays={windowDays} />
           {orderLineCount > 0 ? <ClearHistoryButton /> : null}
@@ -179,8 +179,8 @@ export function DaysOnHandView({ books }: { books: Books }) {
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10">
-        <table className="w-full min-w-[56rem] text-sm">
+      <div className="w-full overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10">
+        <table className="w-full min-w-full text-sm">
           <thead className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
             <tr>
               <SortableHeader
