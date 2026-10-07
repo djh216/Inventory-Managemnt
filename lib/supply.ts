@@ -82,7 +82,9 @@ function classifyUrgency(
   available: number,
   daysRemaining: number | null,
   dailyRate: number | null,
+  options?: { ignoreMute?: boolean },
 ): SupplyUrgency {
+  if (!options?.ignoreMute && wine.reorderAlertsMuted) return "ok"
   if (!wine.active) return "ok"
   if (available <= 0 && dailyRate && dailyRate > 0) return "critical"
   if (available <= 0) return "warning"
@@ -100,8 +102,27 @@ export function supplyLines(books: Books, now = new Date()) {
 
 export function reorderAlerts(books: Books, now = new Date()) {
   return supplyLines(books, now)
+    .filter((line) => !line.wine.reorderAlertsMuted)
     .filter((line) => line.urgency === "critical" || line.urgency === "warning")
     .sort((a, b) => urgencyRank(a.urgency) - urgencyRank(b.urgency) || compareDays(a, b))
+}
+
+/** Muted SKUs that would still trigger a reorder alert if alerts were on. */
+export function snoozedReorderAlerts(books: Books, now = new Date()) {
+  return books.wines
+    .filter((wine) => wine.active && wine.reorderAlertsMuted)
+    .map((wine) => supplyLine(books, wine, now))
+    .filter((line) => {
+      const urgency = classifyUrgency(
+        line.wine,
+        line.available,
+        line.daysRemaining,
+        line.dailyRate,
+        { ignoreMute: true },
+      )
+      return urgency === "critical" || urgency === "warning"
+    })
+    .sort((a, b) => compareDays(a, b))
 }
 
 export function partnerRollups(books: Books, now = new Date()): PartnerRollup[] {

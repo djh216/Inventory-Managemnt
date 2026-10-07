@@ -39,6 +39,8 @@ export type Wine = {
   leadTimeDays: number
   /** Target days of available stock to hold after a reorder lands. */
   targetDaysOfStock: number
+  /** When true, the SKU is omitted from desk reorder alerts. */
+  reorderAlertsMuted: boolean
   supplier: string
   active: boolean
   note: string

@@ -352,6 +352,7 @@ export function applyCreateWine(
     partner: supplier || producer,
     leadTimeDays: 21,
     targetDaysOfStock: 45,
+    reorderAlertsMuted: false,
     supplier,
     active: true,
     note: "",

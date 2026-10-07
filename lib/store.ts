@@ -11,11 +11,17 @@ const tempPath = `${booksPath}.tmp`
 function migrateBooks(books: Books): Books {
   let changed = false
   const wines = books.wines.map((wine) => {
-    const next = wine as Wine & { partner?: string; leadTimeDays?: number; targetDaysOfStock?: number }
+    const next = wine as Wine & {
+      partner?: string
+      leadTimeDays?: number
+      targetDaysOfStock?: number
+      reorderAlertsMuted?: boolean
+    }
     if (
       next.partner !== undefined &&
       next.leadTimeDays !== undefined &&
-      next.targetDaysOfStock !== undefined
+      next.targetDaysOfStock !== undefined &&
+      next.reorderAlertsMuted !== undefined
     ) {
       return wine
     }
@@ -25,6 +31,7 @@ function migrateBooks(books: Books): Books {
       partner: next.partner ?? wine.producer,
       leadTimeDays: next.leadTimeDays ?? 21,
       targetDaysOfStock: next.targetDaysOfStock ?? 45,
+      reorderAlertsMuted: next.reorderAlertsMuted ?? false,
     }
   })
   return changed ? { ...books, wines } : books

@@ -7,7 +7,7 @@ Live inventory for a wine distribution operation, built on **Cursor Initial Inve
 1. **Live inventory** — on-hand, available, and committed bottles update as you post receipts, shipments, holds, and counts.
 2. **Order tracking** — every **shipment** posting is a customer order. The **Orders** page lists outbound history.
 3. **Days of supply** — over the last **28 days**, the app calculates average daily depletion from shipments and estimates **days remaining** = available ÷ daily rate.
-4. **Reorder alerts** — when days remaining fall inside a wine’s **winery lead time**, the desk flags it and suggests a PO quantity to restore **target cover** (default 45 days).
+4. **Reorder alerts** — when days remaining fall inside a wine’s **winery lead time**, the desk flags it and suggests a PO quantity to restore **target cover** (default 45 days). Use **Remove from alerts** for SKUs you don’t reorder (discontinued, direct ship, etc.); restore them from the desk or catalog anytime.
 
 ## Run it
 

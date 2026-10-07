@@ -8,17 +8,20 @@ import { MovementDialog } from "@/components/movement-dialog"
 import { SupplyPill } from "@/components/supply-pill"
 import { formatCount, formatDay, wineName } from "@/lib/format"
 import { winePosition } from "@/lib/inventory"
+import { DismissAlertButton, RestoreAlertButton } from "@/components/dismiss-alert-button"
 import {
   alertCount,
   formatDaysRemaining,
   partnerRollups,
   reorderAlerts,
+  snoozedReorderAlerts,
   VELOCITY_WINDOW_DAYS,
 } from "@/lib/supply"
 import type { Books, PostingPreset } from "@/lib/types"
 
 export function DeskView({ books, today }: { books: Books; today: string }) {
   const alerts = reorderAlerts(books)
+  const snoozed = snoozedReorderAlerts(books)
   const partners = partnerRollups(books)
   const [open, setOpen] = useState(false)
   const [preset, setPreset] = useState<PostingPreset | null>(null)
@@ -101,7 +104,8 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
                   <th className="px-2 py-2 font-medium">Days left</th>
                   <th className="px-2 py-2 font-medium">Order by</th>
                   <th className="px-2 py-2 font-medium">Suggested PO</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-2 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium" aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
@@ -123,8 +127,11 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
                       {line.reorderBy ? formatDay(line.reorderBy.toISOString()) : "—"}
                     </td>
                     <td className="px-2 py-3 tabular-nums">{formatCount(line.suggestedReorderBottles)} bt</td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-3">
                       <SupplyPill urgency={line.urgency} />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <DismissAlertButton wineId={line.wine.id} />
                     </td>
                   </tr>
                 ))}
@@ -133,6 +140,36 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
           </div>
         )}
       </section>
+
+      {snoozed.length > 0 ? (
+        <section className="rounded-xl bg-muted/40 ring-1 ring-foreground/10">
+          <div className="border-b border-border px-4 py-4">
+            <h2 className="font-heading text-xl tracking-tight">Removed from alerts</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              These SKUs still have low cover but won&apos;t appear above until you restore alerts (
+              {snoozed.length}).
+            </p>
+          </div>
+          <ul className="divide-y divide-border px-4 py-2">
+            {snoozed.map((line) => (
+              <li key={line.wine.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                <div>
+                  <Link href={`/catalog?wine=${line.wine.id}`} className="font-medium hover:underline">
+                    {wineName(line.wine)}
+                  </Link>
+                  <p className="font-mono text-[11px] text-muted-foreground">{line.wine.sku}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="tabular-nums text-muted-foreground">
+                    {formatDaysRemaining(line.daysRemaining)} left
+                  </span>
+                  <RestoreAlertButton wineId={line.wine.id} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {partners.length > 0 ? (
         <section className="grid gap-3 lg:grid-cols-2">

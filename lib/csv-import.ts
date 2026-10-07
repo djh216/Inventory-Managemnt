@@ -121,6 +121,7 @@ export function booksFromUpload(rows: CsvRow[]): Books {
       partner: parsed.producer,
       leadTimeDays: defaultLeadTime(parsed.country),
       targetDaysOfStock: 45,
+      reorderAlertsMuted: false,
       supplier: parsed.producer,
       active: true,
       note: row.onHand !== row.available ? "Imported with committed quantity." : "",

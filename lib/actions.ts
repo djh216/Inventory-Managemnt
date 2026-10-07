@@ -69,6 +69,27 @@ export async function setSupplyPolicy(input: {
   return { ok: true, message: `Updated reorder policy for ${row.label || row.producer}.`, wineId: input.wineId }
 }
 
+export async function setReorderAlertsMuted(
+  wineId: string,
+  muted: boolean,
+): Promise<ActionResult> {
+  const books = readBooks()
+  const wine = books.wines.find((item) => item.id === wineId)
+  if (!wine) return { ok: false, error: "That wine is not on the book." }
+  const next = structuredClone(books)
+  const row = next.wines.find((item) => item.id === wineId)!
+  row.reorderAlertsMuted = muted
+  const failed = persist(next)
+  if (failed) return failed
+  return {
+    ok: true,
+    message: muted
+      ? `Removed ${row.label || row.producer} from reorder alerts.`
+      : `Reorder alerts restored for ${row.label || row.producer}.`,
+    wineId,
+  }
+}
+
 export async function setReorder(wineId: string, reorderCases: number): Promise<ActionResult> {
   const result = applyReorder(readBooks(), wineId, reorderCases)
   if (!result.ok) return result

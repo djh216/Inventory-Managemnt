@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { setSupplyPolicy } from "@/lib/actions"
+import { DismissAlertButton, RestoreAlertButton } from "@/components/dismiss-alert-button"
 import {
   formatAbv,
   formatBottleSize,
@@ -76,6 +77,17 @@ export function WineDetail({
         <Stat label="Suggested PO" value={formatCount(supply.suggestedReorderBottles)} />
       </dl>
       <p className="text-xs text-muted-foreground">Winery partner: {wine.partner}</p>
+      {wine.reorderAlertsMuted ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">This SKU is excluded from desk reorder alerts.</span>
+          <RestoreAlertButton wineId={wine.id} />
+        </div>
+      ) : supply.urgency === "critical" || supply.urgency === "warning" ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm">
+          <span className="text-muted-foreground">Stop alerting for this SKU (discontinued, direct ship, etc.)</span>
+          <DismissAlertButton wineId={wine.id} variant="outline" />
+        </div>
+      ) : null}
       {wine.note ? <p className="text-sm leading-6">{wine.note}</p> : null}
 
       <div>

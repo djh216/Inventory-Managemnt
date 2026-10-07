@@ -26,6 +26,7 @@ function wine(overrides: Partial<Wine> = {}): Wine {
     partner: "Test House",
     leadTimeDays: 21,
     targetDaysOfStock: 45,
+    reorderAlertsMuted: false,
     supplier: "Test House",
     active: true,
     note: "",
