@@ -216,6 +216,12 @@ export function formatDaysOnHandTable(days: number | null) {
   return `${Math.floor(days)} days`
 }
 
+export function formatBottlesPerDayTable(rate: number | null) {
+  if (rate === null || rate <= 0) return "—"
+  if (rate >= 100) return String(Math.floor(rate))
+  return String(Math.floor(rate * 10) / 10)
+}
+
 export type DaysOnHandBand = "out" | "urgent" | "tight" | "comfortable" | "idle" | "unknown"
 
 export function daysOnHandBand(line: SupplyLine): DaysOnHandBand {

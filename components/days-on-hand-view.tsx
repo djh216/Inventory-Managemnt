@@ -11,6 +11,7 @@ import {
   DAYS_ON_HAND_TABLE_WINDOWS,
   daysOnHandBandFromPace,
   daysOnHandSummary,
+  formatBottlesPerDayTable,
   formatDaysOnHandTable,
   formatDaysRemaining,
   paceAtWindow,
@@ -34,7 +35,19 @@ import {
 import { cn } from "@/lib/utils"
 
 type FilterBand = "all" | DaysOnHandBand
-type SortKey = "product" | "available" | "days30" | "days90" | "days180" | "status"
+type SortKey =
+  | "product"
+  | "available"
+  | "sold30"
+  | "rate30"
+  | "days30"
+  | "sold90"
+  | "rate90"
+  | "days90"
+  | "sold180"
+  | "rate180"
+  | "days180"
+  | "status"
 type SortDir = "asc" | "desc"
 
 type TableRow = {
@@ -119,7 +132,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
           <h1 className="mt-1 font-heading text-4xl tracking-tight">Days on hand</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             Upload order history to set each product&apos;s sales pace. The table shows days on hand at{" "}
-            30-, 90-, and 180-day windows (available ÷ average daily orders in each window).
+            30-, 90-, and 180-day windows with bottles sold, daily pace, and days on hand per period.
           </p>
         </div>
       </header>
@@ -236,38 +249,71 @@ export function DaysOnHandView({ books }: { books: Books }) {
       ) : null}
 
       <div className="w-full overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10">
-        <table className="w-full min-w-full text-sm">
+        <table className="w-full min-w-[72rem] text-sm">
           <thead className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
             <tr>
-              <SortableHeader
-                label="Product"
-                active={sortKey === "product"}
-                dir={sortDir}
-                onClick={() => toggleSort("product")}
-                className="px-4"
-              />
-              <SortableHeader
-                label="Available"
-                active={sortKey === "available"}
-                dir={sortDir}
-                onClick={() => toggleSort("available")}
-              />
-              {DAYS_ON_HAND_TABLE_WINDOWS.map((days) => (
+              <th rowSpan={2} className="px-4 py-3 align-bottom font-medium">
                 <SortableHeader
-                  key={days}
-                  label={`DOH ${days}d`}
+                  label="Product"
+                  active={sortKey === "product"}
+                  dir={sortDir}
+                  onClick={() => toggleSort("product")}
+                  asCell={false}
+                />
+              </th>
+              <th rowSpan={2} className="px-2 py-3 align-bottom font-medium">
+                <SortableHeader
+                  label="Available"
+                  active={sortKey === "available"}
+                  dir={sortDir}
+                  onClick={() => toggleSort("available")}
+                  asCell={false}
+                />
+              </th>
+              {DAYS_ON_HAND_TABLE_WINDOWS.map((days) => (
+                <th
+                  key={`group-${days}`}
+                  colSpan={3}
+                  className="border-l border-border px-2 py-2 text-center font-medium"
+                >
+                  {days}-day period
+                </th>
+              ))}
+              <th rowSpan={2} className="px-4 py-3 align-bottom font-medium">
+                <SortableHeader
+                  label="Status"
+                  active={sortKey === "status"}
+                  dir={sortDir}
+                  onClick={() => toggleSort("status")}
+                  asCell={false}
+                />
+              </th>
+            </tr>
+            <tr>
+              {DAYS_ON_HAND_TABLE_WINDOWS.flatMap((days) => [
+                <SortableHeader
+                  key={`sold-${days}`}
+                  label="Sold"
+                  active={sortKey === sortKeyForSold(days)}
+                  dir={sortDir}
+                  onClick={() => toggleSort(sortKeyForSold(days))}
+                  className="border-l border-border"
+                />,
+                <SortableHeader
+                  key={`rate-${days}`}
+                  label="Bt/day"
+                  active={sortKey === sortKeyForRate(days)}
+                  dir={sortDir}
+                  onClick={() => toggleSort(sortKeyForRate(days))}
+                />,
+                <SortableHeader
+                  key={`doh-${days}`}
+                  label="DOH"
                   active={sortKey === sortKeyForWindow(days)}
                   dir={sortDir}
                   onClick={() => toggleSort(sortKeyForWindow(days))}
-                />
-              ))}
-              <SortableHeader
-                label="Status"
-                active={sortKey === "status"}
-                dir={sortDir}
-                onClick={() => toggleSort("status")}
-                className="px-4"
-              />
+                />,
+              ])}
             </tr>
           </thead>
           <tbody>
@@ -286,11 +332,20 @@ export function DaysOnHandView({ books }: { books: Books }) {
                     <p className="font-mono text-[11px] text-muted-foreground">{row.line.wine.sku}</p>
                   </td>
                   <td className="px-2 py-3 tabular-nums">{formatCount(row.line.available)}</td>
-                  <td className="px-2 py-3 tabular-nums font-medium">
-                    {formatDaysOnHandTable(row.pace30.daysRemaining)}
-                  </td>
-                  <td className="px-2 py-3 tabular-nums">{formatDaysOnHandTable(row.pace90.daysRemaining)}</td>
-                  <td className="px-2 py-3 tabular-nums">{formatDaysOnHandTable(row.pace180.daysRemaining)}</td>
+                  {DAYS_ON_HAND_TABLE_WINDOWS.flatMap((days) => {
+                    const pace = paceForWindowDays(row, days)
+                    return [
+                      <td key={`${row.line.wine.id}-sold-${days}`} className="border-l border-border px-2 py-3 tabular-nums">
+                        {formatCount(pace.shippedWindow)}
+                      </td>,
+                      <td key={`${row.line.wine.id}-rate-${days}`} className="px-2 py-3 tabular-nums">
+                        {formatBottlesPerDayTable(pace.dailyRate)}
+                      </td>,
+                      <td key={`${row.line.wine.id}-doh-${days}`} className="px-2 py-3 tabular-nums font-medium">
+                        {formatDaysOnHandTable(pace.daysRemaining)}
+                      </td>,
+                    ]
+                  })}
                   <td className="px-4 py-3">
                     <DaysOnHandPill band={statusBand} />
                   </td>
@@ -404,28 +459,37 @@ function SortableHeader({
   dir,
   onClick,
   className,
+  asCell = true,
 }: {
   label: string
   active: boolean
   dir: SortDir
   onClick: () => void
   className?: string
+  asCell?: boolean
 }) {
+  const control = (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-sm text-left transition-colors hover:text-foreground",
+        active && "text-foreground",
+      )}
+    >
+      <span>{label}</span>
+      <span className="text-[10px] tabular-nums text-muted-foreground" aria-hidden>
+        {active ? (dir === "asc" ? "↑" : "↓") : "↕"}
+      </span>
+    </button>
+  )
+  if (!asCell) return control
   return (
-    <th className={cn("px-2 py-2 font-medium", className)} aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}>
-      <button
-        type="button"
-        onClick={onClick}
-        className={cn(
-          "inline-flex items-center gap-1 rounded-sm text-left transition-colors hover:text-foreground",
-          active && "text-foreground",
-        )}
-      >
-        <span>{label}</span>
-        <span className="text-[10px] tabular-nums text-muted-foreground" aria-hidden>
-          {active ? (dir === "asc" ? "↑" : "↓") : "↕"}
-        </span>
-      </button>
+    <th
+      className={cn("px-2 py-2 font-medium", className)}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      {control}
     </th>
   )
 }
@@ -447,11 +511,33 @@ function sortKeyForWindow(days: number): SortKey {
   return "days180"
 }
 
+function sortKeyForSold(days: number): SortKey {
+  if (days === 30) return "sold30"
+  if (days === 90) return "sold90"
+  return "sold180"
+}
+
+function sortKeyForRate(days: number): SortKey {
+  if (days === 30) return "rate30"
+  if (days === 90) return "rate90"
+  return "rate180"
+}
+
+function paceForWindowDays(row: TableRow, days: number): PaceAtWindow {
+  if (days === 30) return row.pace30
+  if (days === 90) return row.pace90
+  return row.pace180
+}
+
 function paceForSortKey(row: TableRow, key: SortKey): PaceAtWindow | null {
-  if (key === "days30") return row.pace30
-  if (key === "days90") return row.pace90
-  if (key === "days180") return row.pace180
+  if (key === "days30" || key === "sold30" || key === "rate30") return row.pace30
+  if (key === "days90" || key === "sold90" || key === "rate90") return row.pace90
+  if (key === "days180" || key === "sold180" || key === "rate180") return row.pace180
   return null
+}
+
+function isWindowMetricSort(key: SortKey) {
+  return key !== "product" && key !== "available" && key !== "status"
 }
 
 function defaultSortDir(key: SortKey): SortDir {
@@ -462,7 +548,7 @@ function defaultSortDir(key: SortKey): SortDir {
 function sortTableRows(rows: TableRow[], key: SortKey, dir: SortDir) {
   const mul = dir === "asc" ? 1 : -1
   return [...rows].sort((a, b) => {
-    if (dir === "desc" && (key === "days30" || key === "days90" || key === "days180")) {
+    if (dir === "desc" && isWindowMetricSort(key)) {
       const paceOrder = compareNoPaceLast(
         paceForSortKey(a, key)?.dailyRate ?? null,
         paceForSortKey(b, key)?.dailyRate ?? null,
@@ -489,12 +575,26 @@ function compareSortKey(a: TableRow, b: TableRow, key: SortKey) {
     )
   }
   if (key === "available") return a.line.available - b.line.available
+  if (key === "sold30") return a.pace30.shippedWindow - b.pace30.shippedWindow
+  if (key === "sold90") return a.pace90.shippedWindow - b.pace90.shippedWindow
+  if (key === "sold180") return a.pace180.shippedWindow - b.pace180.shippedWindow
+  if (key === "rate30") return compareNullableNumber(a.pace30.dailyRate, b.pace30.dailyRate)
+  if (key === "rate90") return compareNullableNumber(a.pace90.dailyRate, b.pace90.dailyRate)
+  if (key === "rate180") return compareNullableNumber(a.pace180.dailyRate, b.pace180.dailyRate)
   if (key === "days30") return compareDaysRemaining(a.pace30.daysRemaining, b.pace30.daysRemaining)
   if (key === "days90") return compareDaysRemaining(a.pace90.daysRemaining, b.pace90.daysRemaining)
   if (key === "days180") return compareDaysRemaining(a.pace180.daysRemaining, b.pace180.daysRemaining)
   const bandA = daysOnHandBandFromPace(a.line.available, a.pace30.dailyRate, a.pace30.daysRemaining)
   const bandB = daysOnHandBandFromPace(b.line.available, b.pace30.dailyRate, b.pace30.daysRemaining)
   return bandSortRank(bandA) - bandSortRank(bandB)
+}
+
+function compareNullableNumber(left: number | null, right: number | null) {
+  const leftMissing = left === null || left <= 0
+  const rightMissing = right === null || right <= 0
+  if (leftMissing !== rightMissing) return leftMissing ? 1 : -1
+  if (leftMissing || left === null || right === null) return 0
+  return left - right
 }
 
 function compareDaysRemaining(left: number | null, right: number | null) {
