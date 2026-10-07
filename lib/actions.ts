@@ -148,12 +148,28 @@ export async function importOrderHistoryCsv(formData: FormData): Promise<ActionR
   if (!result.ok) return { ok: false, error: result.error }
   const failed = persist(result.books)
   if (failed) return failed
-  let message = `Imported ${result.imported} order lines for sales pace.`
+  const message = orderHistoryImportMessage(result)
+  return { ok: true, message }
+}
+
+function orderHistoryImportMessage(result: {
+  imported: number
+  skipped: number
+  unmatched: number
+  unmatchedSamples: string[]
+}) {
+  let message =
+    result.imported === 0
+      ? "No new order lines."
+      : `Added ${result.imported} order line${result.imported === 1 ? "" : "s"} for sales pace.`
+  if (result.skipped > 0) {
+    message += ` ${result.skipped} already in the upload ${result.skipped === 1 ? "was" : "were"} ignored.`
+  }
   if (result.unmatched > 0) {
     const sample = result.unmatchedSamples.join(", ")
     message += ` ${result.unmatched} row${result.unmatched === 1 ? "" : "s"} did not match a catalog SKU${sample ? ` (e.g. ${sample})` : ""}.`
   }
-  return { ok: true, message }
+  return message
 }
 
 export async function setSalesPaceWindow(days: number): Promise<ActionResult> {

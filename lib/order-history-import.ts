@@ -134,7 +134,10 @@ export function applyOrderHistoryImport(
     wineByLabel.set(catalogLabelKey(wine.label), wine)
   }
 
-  const orderHistory: OrderHistoryLine[] = []
+  const orderHistory: OrderHistoryLine[] = (books.orderHistory ?? []).map((line) => ({ ...line }))
+  const seen = new Set(orderHistory.map(orderLineKey))
+  let imported = 0
+  let skipped = 0
   let unmatched = 0
   const unmatchedSamples: string[] = []
 
@@ -149,17 +152,26 @@ export function applyOrderHistoryImport(
       }
       continue
     }
-    orderHistory.push({
-      id: idFactory(),
+    const line: OrderHistoryLine = {
+      id: "",
       at: row.at,
       wineId: wine.id,
       bottles: row.bottles,
       account: row.account,
       reference: row.reference || `OH-${row.line}`,
-    })
+    }
+    const key = orderLineKey(line)
+    if (seen.has(key)) {
+      skipped += 1
+      continue
+    }
+    seen.add(key)
+    line.id = idFactory()
+    orderHistory.push(line)
+    imported += 1
   }
 
-  if (orderHistory.length === 0) {
+  if (imported === 0 && skipped === 0) {
     return {
       ok: false,
       error:
@@ -177,11 +189,15 @@ export function applyOrderHistoryImport(
   return {
     ok: true,
     books: next,
-    imported: orderHistory.length,
-    skipped: 0,
+    imported,
+    skipped,
     unmatched,
     unmatchedSamples,
   }
+}
+
+function orderLineKey(line: Pick<OrderHistoryLine, "wineId" | "at" | "bottles" | "account" | "reference">) {
+  return [line.wineId, line.at, String(line.bottles), line.account.trim(), line.reference.trim()].join("\u0000")
 }
 
 function normalizeHeader(value: string) {
