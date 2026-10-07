@@ -14,7 +14,9 @@ Live inventory for a wine distribution operation, built on **Cursor Initial Inve
 
 Primary format: **Outfield Deals export** (`Outfield_Deals_Export-*.csv`) with columns **Lead Team Member**, **Account Name**, **Order Date**, **Line Item Product Variation Name**, **Line Item Quantity**. Product names must match the Oct 6 inventory **Label** column. Blank product rows (order headers) are skipped automatically.
 
-A sample header is in `public/order-history-template.csv`. Simple CSVs with **SKU** (or Label), **Order Date**, and **Bottles** also work.
+A sample header is in `public/order-history-template.csv`. Simple CSVs with **SKU** (or Label), **Order Date**, and **Bottles** also work. Another upload adds new lines. A row already stored — same wine, date, bottles, account, and reference — is ignored.
+
+Orders dated after the inventory file name (`10.6.26` on the baseline, or the date in a later upload’s name) reduce that product’s on-hand and available bottles. Orders on or before that day are already in the snapshot. Clearing order history puts those bottles back.
 
 ## Run it
 

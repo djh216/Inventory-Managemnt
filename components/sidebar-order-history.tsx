@@ -44,7 +44,7 @@ export function SidebarOrderHistory({
           <p className="text-[11px] text-sidebar-foreground/60">No file loaded</p>
         )}
         <p className="text-[11px] leading-4 text-sidebar-foreground/60">
-          Import sales pace from an Outfield export. Re-upload replaces the file; on-hand counts stay the same.
+          Import sales pace from an Outfield export. Another upload adds new orders and skips ones already loaded. Orders after the inventory date come out of on-hand counts.
         </p>
       </div>
 

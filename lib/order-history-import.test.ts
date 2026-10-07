@@ -71,6 +71,80 @@ Angela Riccetti,Luca on James,"April 07, 2025",Avignonesi Cantaloro Red Blend To
   assert.equal(parsed[0].account, "Luca on James")
 })
 
+test("an additional upload adds new orders and ignores repeats", () => {
+  const first = `SKU,Order Date,Bottles,Account,Reference
+100061550,2026-09-20,12,Luca,PO-1
+100061550,2026-09-25,6,Luca,PO-2`
+  const second = `SKU,Order Date,Bottles,Account,Reference
+100061550,2026-09-20,12,Luca,PO-1
+100061550,2026-09-25,6,Luca,PO-2
+100061550,2026-10-01,18,Marco,PO-3
+100061550,2026-10-01,18,Marco,PO-3`
+  let n = 0
+  const ids = () => `oh-${(n += 1)}`
+  const parsedFirst = parseOrderHistoryCsv(first)
+  const parsedSecond = parseOrderHistoryCsv(second)
+  assert.ok(Array.isArray(parsedFirst))
+  assert.ok(Array.isArray(parsedSecond))
+  const loaded = applyOrderHistoryImport(books(), parsedFirst, "2026-10-01T00:00:00.000Z", ids)
+  assert.equal(loaded.ok, true)
+  if (!loaded.ok) return
+  const added = applyOrderHistoryImport(loaded.books, parsedSecond, "2026-10-07T00:00:00.000Z", ids)
+  assert.equal(added.ok, true)
+  if (!added.ok) return
+  assert.equal(added.imported, 1)
+  assert.equal(added.skipped, 3)
+  assert.equal(added.books.orderHistory?.length, 3)
+  assert.deepEqual(
+    added.books.orderHistory?.map((line) => line.reference),
+    ["PO-1", "PO-2", "PO-3"],
+  )
+  assert.equal(added.books.orderHistoryImportedAt, "2026-10-07T00:00:00.000Z")
+  assert.equal(added.books.stock[0]?.availableBottles, 280)
+})
+
+test("uploading the same file again leaves the existing orders in place", () => {
+  const csv = `SKU,Order Date,Bottles,Account
+100061550,2026-09-20,12,Luca
+100061550,2026-09-25,6,Marco`
+  const parsed = parseOrderHistoryCsv(csv)
+  assert.ok(Array.isArray(parsed))
+  const loaded = applyOrderHistoryImport(books(), parsed, "2026-10-01T00:00:00.000Z", () => "oh-1")
+  assert.equal(loaded.ok, true)
+  if (!loaded.ok) return
+  const again = applyOrderHistoryImport(loaded.books, parsed, "2026-10-07T00:00:00.000Z", () => "oh-2")
+  assert.equal(again.ok, true)
+  if (!again.ok) return
+  assert.equal(again.imported, 0)
+  assert.equal(again.skipped, 2)
+  assert.equal(again.books.orderHistory?.length, 2)
+  assert.equal(again.books.orderHistory?.[0]?.id, "oh-1")
+})
+
+test("orders after the inventory date reduce on-hand and are not deducted twice", () => {
+  const csv = `SKU,Order Date,Bottles,Account,Reference
+100061550,2026-10-06,12,Luca,PO-SAME
+100061550,2026-10-07,10,Luca,PO-AFTER
+100061550,2026-10-08,4,Marco,PO-LATER`
+  const parsed = parseOrderHistoryCsv(csv)
+  assert.ok(Array.isArray(parsed))
+  const loaded = applyOrderHistoryImport(books(), parsed, "2026-10-09T00:00:00.000Z", () => "oh-1")
+  assert.equal(loaded.ok, true)
+  if (!loaded.ok) return
+  assert.equal(loaded.deductedBottles, 14)
+  assert.equal(loaded.deductedLines, 2)
+  assert.equal(loaded.books.stock[0]?.onHandBottles, 266)
+  assert.equal(loaded.books.stock[0]?.availableBottles, 266)
+  assert.equal(loaded.books.stock[0]?.allocatedBottles, 0)
+  const again = applyOrderHistoryImport(loaded.books, parsed, "2026-10-10T00:00:00.000Z", () => "oh-2")
+  assert.equal(again.ok, true)
+  if (!again.ok) return
+  assert.equal(again.imported, 0)
+  assert.equal(again.skipped, 3)
+  assert.equal(again.deductedBottles, 0)
+  assert.equal(again.books.stock[0]?.onHandBottles, 266)
+})
+
 test("uploaded orders drive days on hand without changing inventory", () => {
   const csv = `SKU,Order Date,Bottles
 100061550,2026-09-25,280`

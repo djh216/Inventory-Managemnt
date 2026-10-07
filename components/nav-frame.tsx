@@ -63,42 +63,31 @@ export function NavFrame({
   pathname: string | null
   footer?: ReactNode
   alertCount?: number
-  orderHistoryPanel?: ReactNode
+  orderHistoryPanel?: () => ReactNode
 }) {
-  const showOrderHistory = pathname === "/days-on-hand" || pathname?.startsWith("/days-on-hand/")
   return (
     <>
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex",
-          showOrderHistory ? "w-80" : "w-60",
-        )}
-      >
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-80 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
         <div className="h-1 bg-primary" />
         <div className="px-5 pt-6 pb-4">
           <p className="font-heading text-[2rem] leading-none tracking-tight">Inventory</p>
           <p className="mt-2 text-[11px] uppercase tracking-[0.22em] text-sidebar-foreground/55">
             Oct 6 upload
           </p>
-          {!showOrderHistory ? (
-            <p className="mt-4 text-xs leading-5 text-sidebar-foreground/55">
-              Shipments drive depletion; reorder alerts fire when days of cover hit partner lead time.
-            </p>
-          ) : null}
         </div>
         <div className="shrink-0 px-3">
           <NavLinks pathname={pathname} stacked alertCount={alertCount} />
         </div>
-        {showOrderHistory ? <div className="min-h-0 flex-1" aria-hidden /> : null}
-        {showOrderHistory && orderHistoryPanel ? (
+        {orderHistoryPanel ? <div className="min-h-0 flex-1" aria-hidden /> : null}
+        {orderHistoryPanel ? (
           <div className="mt-auto max-h-[min(72vh,calc(100vh-11rem))] shrink-0 overflow-y-auto border-t border-sidebar-border px-4 py-4">
-            {orderHistoryPanel}
+            {orderHistoryPanel()}
           </div>
         ) : null}
         <div
           className={cn(
             "shrink-0 space-y-3 border-t border-sidebar-border p-4",
-            !showOrderHistory && "mt-auto",
+            !orderHistoryPanel && "mt-auto",
           )}
         >
           <p className="text-[11px] leading-5 text-sidebar-foreground/55">
@@ -122,6 +111,11 @@ export function NavFrame({
           <NavLinks pathname={pathname} alertCount={alertCount} />
         </div>
       </div>
+      {orderHistoryPanel ? (
+        <div className="border-b border-sidebar-border bg-sidebar px-4 py-4 text-sidebar-foreground md:hidden">
+          {orderHistoryPanel()}
+        </div>
+      ) : null}
     </>
   )
 }

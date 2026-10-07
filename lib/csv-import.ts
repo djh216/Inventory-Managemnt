@@ -5,6 +5,8 @@ import type { Books, Location, StockLine, Wine, WineColor } from "./types"
 export const INVENTORY_UPLOAD_FILE = "inventory-upload.csv"
 export const UPLOAD_REFERENCE = "UPLOAD-100626"
 export const UPLOAD_DATE = "2026-10-06T12:00:00.000Z"
+/** Day the bundled inventory file represents. Source name: Cursor Initial Inventory Upload 10.6.26.csv. */
+export const BASELINE_INVENTORY_DAY = "2026-10-06"
 
 type CsvRow = {
   label: string
@@ -14,13 +16,23 @@ type CsvRow = {
 }
 
 const PRODUCER_PREFIXES = [
+  "Marchese Luca Spinola",
+  "Tenuta Santa Maria",
+  "Ottaviano Lambruschi",
   "Ciacci Piccolomini",
   "Domenico Clerico",
+  "Castell'In Villa",
   "E. Pira e Figli",
   "E Pira e Figli",
+  "Sasso di Sole",
+  "Cantine Leuci",
+  "Massimo Rivetti",
+  "Vigneti Radica",
+  "Santa Barbara",
+  "San Cassiano",
   "La Spinetta",
   "Bruno Rocca",
-  "San Cassiano",
+  "San Felo",
   "Castelfeder",
   "Avignonesi",
   "Contratto",
@@ -36,24 +48,58 @@ const PRODUCER_PREFIXES = [
   "Ciacci",
 ].sort((a, b) => b.length - a.length)
 
+const SUPPLY_PRODUCER = "Supplies"
+const SUPPLY_NAME_KEYS = new Set(["coravin", "printer", "champagne"])
+
+const PIRA_PRODUCER = "E. Pira e Figli"
+const PRODUCER_ALIASES = new Map<string, string>([
+  ["e. pira", PIRA_PRODUCER],
+  ["e pira", PIRA_PRODUCER],
+  ["e. pira e figli", PIRA_PRODUCER],
+  ["e pira e figli", PIRA_PRODUCER],
+])
+
+const PRODUCT_NAME_HEADERS = ["label", "product name", "product", "wine name", "item name"]
+
 export function inventoryCsvPath() {
   return path.join(process.cwd(), "data", INVENTORY_UPLOAD_FILE)
 }
 
-export function readInventoryCsv(filePath = inventoryCsvPath()): CsvRow[] {
-  const raw = fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, "")
-  const lines = raw.split(/\r?\n/).filter((line) => line.trim().length > 0)
-  if (lines.length < 2) return []
+const INVENTORY_HEADER = ["label", "sku", "quantity on hand", "quantity available"]
+
+export function parseInventoryCsv(text: string): { rows: CsvRow[] } | { error: string } {
+  const lines = text
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0)
+  if (lines.length < 2) {
+    return { error: "The inventory file needs a header and at least one wine." }
+  }
+  const header = splitCsvFields(lines[0]).map((part) => part.trim().toLowerCase())
+  const labelIndex = header.findIndex((name) => PRODUCT_NAME_HEADERS.includes(name))
+  const skuIndex = header.findIndex((name) => name === "sku" || name === "product sku")
+  const onHandIndex = header.findIndex((name) => INVENTORY_HEADER[2] === name || name === "on hand")
+  const availableIndex = header.findIndex((name) => INVENTORY_HEADER[3] === name || name === "available")
+  if (labelIndex < 0 || skuIndex < 0 || onHandIndex < 0 || availableIndex < 0) {
+    return { error: "Use columns Product Name (or Label), SKU, Quantity On Hand, and Quantity Available." }
+  }
   const rows: CsvRow[] = []
   for (let index = 1; index < lines.length; index += 1) {
-    const row = parseCsvLine(lines[index])
+    const row = parseCsvLine(lines[index], labelIndex, skuIndex, onHandIndex, availableIndex)
     if (!row) continue
     rows.push(row)
   }
-  return rows
+  if (rows.length === 0) return { error: "No wine rows could be read from that file." }
+  return { rows }
 }
 
-function parseCsvLine(line: string): CsvRow | null {
+export function readInventoryCsv(filePath = inventoryCsvPath()): CsvRow[] {
+  const parsed = parseInventoryCsv(fs.readFileSync(filePath, "utf8"))
+  if ("error" in parsed) return []
+  return parsed.rows
+}
+
+function splitCsvFields(line: string) {
   const parts: string[] = []
   let current = ""
   let inQuotes = false
@@ -71,12 +117,22 @@ function parseCsvLine(line: string): CsvRow | null {
     current += char
   }
   parts.push(current)
-  if (parts.length < 4) return null
-  const label = parts[0].trim()
+  return parts
+}
+
+function parseCsvLine(
+  line: string,
+  labelIndex = 0,
+  skuIndex = 1,
+  onHandIndex = 2,
+  availableIndex = 3,
+): CsvRow | null {
+  const parts = splitCsvFields(line)
+  const label = parts[labelIndex]?.trim() ?? ""
   if (!label) return null
-  const sku = parts[1].trim()
-  const onHand = parseQuantity(parts[2])
-  const available = parseQuantity(parts[3])
+  const sku = parts[skuIndex]?.trim() ?? ""
+  const onHand = parseQuantity(parts[onHandIndex] ?? "")
+  const available = parseQuantity(parts[availableIndex] ?? "")
   if (onHand === null || available === null) return null
   return { label, sku, onHand, available }
 }
@@ -149,8 +205,38 @@ export function booksFromUpload(rows: CsvRow[]): Books {
     movements: [],
     orderHistory: [],
     orderHistoryImportedAt: null,
+    inventoryImportedAt: null,
+    inventoryAsOf: null,
     salesPaceWindowDays: 30,
   }
+}
+
+/** Read a snapshot day from an inventory file name, such as `Inventory 10.6.26.csv`. */
+export function inventoryDateFromFileName(fileName: string): string | null {
+  const base = fileName.replace(/\.[^.]+$/, "")
+  const iso = /(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/.exec(base)
+  if (iso) {
+    const day = calendarDay(Number(iso[1]), Number(iso[2]), Number(iso[3]))
+    if (day) return day
+  }
+  const us = /(\d{1,2})[._-](\d{1,2})[._-](\d{2}|\d{4})/g
+  let found: string | null = null
+  for (const match of base.matchAll(us)) {
+    let year = Number(match[3])
+    if (year < 100) year += 2000
+    const day = calendarDay(year, Number(match[1]), Number(match[2]))
+    if (day) found = day
+  }
+  return found
+}
+
+function calendarDay(year: number, month: number, day: number): string | null {
+  if (month < 1 || month > 12 || day < 1 || day > 31 || year < 2000 || year > 2100) return null
+  const date = new Date(Date.UTC(year, month - 1, day))
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null
+  const monthText = String(month).padStart(2, "0")
+  const dayText = String(day).padStart(2, "0")
+  return `${year}-${monthText}-${dayText}`
 }
 
 export function importBooksFromCsv(filePath = inventoryCsvPath()): Books {
@@ -222,12 +308,10 @@ function parseLabel(label: string): ParsedLabel {
   }
   working = working.replace(/\bNV\b/i, "").trim()
 
-  const producer = detectProducer(working)
-  let cuvee = working
-  if (working.toLowerCase().startsWith(producer.toLowerCase())) {
-    cuvee = working.slice(producer.length).trim().replace(/^[-–—]\s*/, "")
-  }
-  if (!cuvee) cuvee = working
+  const matched = matchProducer(working)
+  const producer = matched.producer
+  const cuveeFromName = cuveeAfterProducer(working, matched.tokens)
+  const cuvee = cuveeFromName || working
 
   const appellation = detectAppellation(working)
   const region = detectRegion(working, appellation)
@@ -251,19 +335,40 @@ function parseLabel(label: string): ParsedLabel {
   }
 }
 
-function detectProducer(label: string) {
-  for (const prefix of PRODUCER_PREFIXES) {
-    if (label.toLowerCase().startsWith(prefix.toLowerCase())) return prefix
-  }
-  const words = label.split(/\s+/)
-  if (words.length >= 2 && /^[A-Z]/.test(words[1]) && !isWineWord(words[1])) {
-    return `${words[0]} ${words[1]}`
-  }
-  return words[0] ?? label
+export function producerFromProductName(label: string) {
+  return parseLabel(label).producer
 }
 
-function isWineWord(word: string) {
-  return /^(di|del|della|de|da|DOCG|DOC|IGT|DOP|Bianco|Rosso|Brunello|Barolo|Barbaresco)$/i.test(word)
+function matchProducer(label: string) {
+  const tokens = label.trim().split(/\s+/).filter(Boolean)
+  const first = tokens[0] ?? ""
+  if (SUPPLY_NAME_KEYS.has(normalizeProducerKey(first))) {
+    return { producer: SUPPLY_PRODUCER, tokens: 1 }
+  }
+  const normalized = normalizeProducerKey(label)
+  for (const prefix of PRODUCER_PREFIXES) {
+    const key = normalizeProducerKey(prefix)
+    if (normalized === key || normalized.startsWith(`${key} `)) {
+      const prefixTokens = prefix.trim().split(/\s+/).length
+      return { producer: PRODUCER_ALIASES.get(key) ?? prefix, tokens: prefixTokens }
+    }
+  }
+  return { producer: first || label, tokens: Math.min(1, tokens.length) }
+}
+
+function cuveeAfterProducer(label: string, producerTokens: number) {
+  const tokens = label.trim().split(/\s+/)
+  return tokens.slice(producerTokens).join(" ").replace(/^[-–—]\s*/, "").trim()
+}
+
+function normalizeProducerKey(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’‘`']/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase()
 }
 
 function detectFormatMl(label: string) {

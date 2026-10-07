@@ -4,6 +4,8 @@ import { useState, useTransition } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { resetBooks } from "@/lib/actions"
+import { ClearHistoryButton } from "@/components/order-history-controls"
+import { SidebarInventoryUpload } from "@/components/sidebar-inventory-upload"
 import { SidebarOrderHistory } from "@/components/sidebar-order-history"
 import { NavFrame } from "@/components/nav-frame"
 import { Button } from "@/components/ui/button"
@@ -22,30 +24,51 @@ export function AppNav({
   orderLineCount = 0,
   orderHistoryImportedAt = null,
   salesPaceWindowDays = 30,
+  skuCount = 0,
+  inventoryAsOf = "2026-10-06",
 }: {
   alertCount?: number
   orderLineCount?: number
   orderHistoryImportedAt?: string | null
   salesPaceWindowDays?: number
+  skuCount?: number
+  inventoryAsOf?: string
 }) {
   const pathname = usePathname()
   return (
     <NavFrame
       pathname={pathname}
-      footer={<RestoreBooks />}
+      footer={<UploadResets orderLineCount={orderLineCount} />}
       alertCount={alertCount}
-      orderHistoryPanel={
-        <SidebarOrderHistory
-          orderLineCount={orderLineCount}
-          orderHistoryImportedAt={orderHistoryImportedAt}
-          salesPaceWindowDays={salesPaceWindowDays}
-        />
-      }
+      orderHistoryPanel={() => (
+        <div className="space-y-4">
+          <SidebarInventoryUpload skuCount={skuCount} inventoryAsOf={inventoryAsOf} />
+          <div className="border-t border-sidebar-border pt-4">
+            <SidebarOrderHistory
+              orderLineCount={orderLineCount}
+              orderHistoryImportedAt={orderHistoryImportedAt}
+              salesPaceWindowDays={salesPaceWindowDays}
+            />
+          </div>
+        </div>
+      )}
     />
   )
 }
 
-function RestoreBooks() {
+const resetButtonClass =
+  "h-auto justify-start px-2 text-xs text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+
+function UploadResets({ orderLineCount }: { orderLineCount: number }) {
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <ClearInventoryButton />
+      <ClearHistoryButton disabled={orderLineCount === 0} className={resetButtonClass} />
+    </div>
+  )
+}
+
+function ClearInventoryButton() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
@@ -65,24 +88,21 @@ function RestoreBooks() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Button
-        variant="ghost"
-        className="h-auto px-2 text-xs text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-        onClick={() => setOpen(true)}
-      >
-        Restore upload
+      <Button variant="ghost" className={resetButtonClass} onClick={() => setOpen(true)}>
+        Clear inventory
       </Button>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Restore the Oct 6 upload?</DialogTitle>
+          <DialogTitle>Clear the inventory upload?</DialogTitle>
           <DialogDescription>
-            This replaces the book on this machine with a fresh import from data/inventory-upload.csv. Postings you made after the upload will be cleared.
+            On-hand counts, postings, and catalog edits return to the Oct 6 inventory file. Uploaded order
+            history stays.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>Keep my books</DialogClose>
+          <DialogClose render={<Button variant="outline" />}>Keep inventory</DialogClose>
           <Button onClick={restore} disabled={pending}>
-            {pending ? "Restoring…" : "Restore upload"}
+            {pending ? "Clearing…" : "Clear inventory"}
           </Button>
         </DialogFooter>
       </DialogContent>

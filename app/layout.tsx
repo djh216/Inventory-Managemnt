@@ -37,11 +37,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
-        <div className="min-h-full md:pl-60 has-[[data-sidebar=wide]]:md:pl-80">
+        <div className="min-h-full md:pl-80">
           <Suspense fallback={<NavFrame pathname={null} />}>
             <AppNavLoader />
           </Suspense>
-          <main className="mx-auto w-full max-w-6xl px-4 py-5 has-[[data-page=wide]]:max-w-[min(112rem,calc(100vw-15rem))] has-[[data-sidebar=wide]]:has-[[data-page=wide]]:max-w-[min(112rem,calc(100vw-20rem))] md:px-8 md:py-8">
+          <main className="mx-auto w-full max-w-6xl px-4 py-5 has-[[data-page=wide]]:max-w-[min(112rem,calc(100vw-20rem))] md:px-8 md:py-8">
             {children}
           </main>
         </div>

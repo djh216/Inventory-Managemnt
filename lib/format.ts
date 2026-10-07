@@ -64,6 +64,18 @@ export function formatCases(cases: number) {
   return casesFormat.format(Math.round(cases * 10) / 10)
 }
 
+export function formatInventoryDay(day: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day)
+  if (!match) return day
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date)
+}
+
 export function formatCount(value: number) {
   return new Intl.NumberFormat("en-US").format(Math.round(value))
 }
