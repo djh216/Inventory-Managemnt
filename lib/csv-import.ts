@@ -46,6 +46,9 @@ const PRODUCER_PREFIXES = [
   "Ciacci",
 ].sort((a, b) => b.length - a.length)
 
+const SUPPLY_PRODUCER = "Supplies"
+const SUPPLY_NAME_KEYS = new Set(["coravin", "printer", "champagne"])
+
 const PRODUCT_NAME_HEADERS = ["label", "product name", "product", "wine name", "item name"]
 
 export function inventoryCsvPath() {
@@ -297,12 +300,13 @@ export function producerFromProductName(label: string) {
 }
 
 function detectProducer(label: string) {
+  const first = label.trim().split(/\s+/)[0] ?? ""
+  if (SUPPLY_NAME_KEYS.has(normalizeProducerKey(first))) return SUPPLY_PRODUCER
   const normalized = normalizeProducerKey(label)
   for (const prefix of PRODUCER_PREFIXES) {
     const key = normalizeProducerKey(prefix)
     if (normalized === key || normalized.startsWith(`${key} `)) return prefix
   }
-  const first = label.trim().split(/\s+/)[0]
   return first || label
 }
 

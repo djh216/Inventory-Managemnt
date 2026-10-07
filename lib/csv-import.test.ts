@@ -120,6 +120,20 @@ test("reads the producer from the product name column", () => {
   assert.equal(books.wines.find((wine) => wine.sku === "9")?.cuvee.startsWith("Barolo"), true)
 })
 
+test("groups Coravin, Printer, and Champagne as Supplies", () => {
+  const books = importBooksFromCsv()
+  const supplies = books.wines.filter((wine) => wine.producer === "Supplies")
+  const labels = supplies.map((wine) => wine.label).sort()
+  assert.deepEqual(labels, [
+    "Champagne Stoppers",
+    "Coravin Cartridges (INDIVIDUAL UNITS)",
+    "Coravin Needles",
+    "Printer Paper (500 Pieces)",
+  ])
+  assert.ok(supplies.every((wine) => wine.partner === "Supplies" && wine.supplier === "Supplies"))
+  assert.equal(books.wines.some((wine) => wine.producer === "Coravin" || wine.producer === "Printer" || wine.producer === "Champagne"), false)
+})
+
 test("assigns labels and SKUs for rows missing a product code", () => {
   const books = importBooksFromCsv()
   const missing = books.wines.filter((wine) => wine.sku.startsWith("GEN-"))

@@ -114,3 +114,23 @@ test("saved books take the producer from the product name", () => {
   assert.equal(updatedSpinola?.supplier, "Tenuta Santa Maria")
   assert.equal(books.wines.find((wine) => wine.id === pra.id)?.producer, "Pra Amarone")
 })
+
+test("saved Coravin, Printer, and Champagne rows become Supplies", () => {
+  const books = seedBooks()
+  const targets = books.wines.filter((wine) => /^(Coravin|Printer|Champagne)\b/.test(wine.label))
+  assert.equal(targets.length, 4)
+  for (const wine of targets) {
+    const oldName = wine.label.split(/\s+/)[0]
+    wine.producer = oldName
+    wine.partner = oldName
+    wine.supplier = oldName
+  }
+
+  const next = migrateBooks(books)
+  for (const wine of targets) {
+    const updated = next.wines.find((item) => item.id === wine.id)
+    assert.equal(updated?.producer, "Supplies")
+    assert.equal(updated?.partner, "Supplies")
+    assert.equal(updated?.supplier, "Supplies")
+  }
+})
