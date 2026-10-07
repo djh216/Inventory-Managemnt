@@ -32,7 +32,17 @@ This **GitHub repository** is the source of truth for Cloud Agent setup. Configu
 - **install** — `npm ci`
 - **start** — `bash .cursor/start-dev.sh` (Next.js dev server on port **4317** in tmux)
 
-In Cursor **Environment** settings, connect **`github.com/djh216/Inventory-Managemnt`** (not an Origin-only mirror). Use **repository-managed** config with path **`.cursor/environment.json`**, then run a **build** from the **`main`** branch and activate it. Agents will read install/start scripts from this repo on each boot.
+### Point Cursor at this GitHub repo (required)
+
+The saved environment **`david-hall-dev/wine-inventory-system`** cannot be repointed from an agent session. To use **this GitHub repo** as the source of truth:
+
+1. **Integrations** → confirm the **GitHub** app can access **`djh216/Inventory-Managemnt`**.
+2. **Cloud Agents → Environments → New environment** → select **`github.com/dhj216/Inventory-Managemnt`** only (not `wine-inventory-system`).
+3. Cursor should pick up **`.cursor/environment.json`** from the repo (committed config overrides dashboard overrides).
+4. **Trigger build** on **`main`**, then **activate** that build.
+5. Start new agents from **Inventory-Managemnt** on GitHub, not the old Origin-only environment.
+
+Optional: [Sync from GitHub](https://cursor.com/docs/origin/mirror-github) at cursor.com/codebase if you also want an Origin mirror; GitHub remains the source of truth.
 
 Data lives in `data/books.json` (local). The baseline upload is `data/inventory-upload.csv`. **Restore upload** re-imports the CSV.
 
