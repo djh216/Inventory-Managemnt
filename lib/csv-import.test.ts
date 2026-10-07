@@ -120,6 +120,16 @@ test("reads the producer from the product name column", () => {
   assert.equal(books.wines.find((wine) => wine.sku === "9")?.cuvee.startsWith("Barolo"), true)
 })
 
+test("treats E. Pira and E. Pira e Figli as one producer", () => {
+  const books = importBooksFromCsv()
+  const pira = books.wines.filter((wine) => /pira/i.test(wine.label))
+  assert.equal(pira.length, 5)
+  assert.ok(pira.every((wine) => wine.producer === "E. Pira e Figli"))
+  assert.ok(pira.every((wine) => wine.partner === "E. Pira e Figli" && wine.supplier === "E. Pira e Figli"))
+  assert.ok(pira.every((wine) => wine.cuvee.startsWith("Barolo")))
+  assert.equal(books.wines.some((wine) => wine.producer === "E. Pira" || wine.producer === "E Pira"), false)
+})
+
 test("groups Coravin, Printer, and Champagne as Supplies", () => {
   const books = importBooksFromCsv()
   const supplies = books.wines.filter((wine) => wine.producer === "Supplies")

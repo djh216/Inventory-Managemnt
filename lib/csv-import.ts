@@ -49,6 +49,14 @@ const PRODUCER_PREFIXES = [
 const SUPPLY_PRODUCER = "Supplies"
 const SUPPLY_NAME_KEYS = new Set(["coravin", "printer", "champagne"])
 
+const PIRA_PRODUCER = "E. Pira e Figli"
+const PRODUCER_ALIASES = new Map<string, string>([
+  ["e. pira", PIRA_PRODUCER],
+  ["e pira", PIRA_PRODUCER],
+  ["e. pira e figli", PIRA_PRODUCER],
+  ["e pira e figli", PIRA_PRODUCER],
+])
+
 const PRODUCT_NAME_HEADERS = ["label", "product name", "product", "wine name", "item name"]
 
 export function inventoryCsvPath() {
@@ -269,8 +277,9 @@ function parseLabel(label: string): ParsedLabel {
   }
   working = working.replace(/\bNV\b/i, "").trim()
 
-  const producer = detectProducer(working)
-  const cuveeFromName = cuveeAfterProducer(working, producer)
+  const matched = matchProducer(working)
+  const producer = matched.producer
+  const cuveeFromName = cuveeAfterProducer(working, matched.tokens)
   const cuvee = cuveeFromName || working
 
   const appellation = detectAppellation(working)
@@ -299,20 +308,25 @@ export function producerFromProductName(label: string) {
   return parseLabel(label).producer
 }
 
-function detectProducer(label: string) {
-  const first = label.trim().split(/\s+/)[0] ?? ""
-  if (SUPPLY_NAME_KEYS.has(normalizeProducerKey(first))) return SUPPLY_PRODUCER
+function matchProducer(label: string) {
+  const tokens = label.trim().split(/\s+/).filter(Boolean)
+  const first = tokens[0] ?? ""
+  if (SUPPLY_NAME_KEYS.has(normalizeProducerKey(first))) {
+    return { producer: SUPPLY_PRODUCER, tokens: 1 }
+  }
   const normalized = normalizeProducerKey(label)
   for (const prefix of PRODUCER_PREFIXES) {
     const key = normalizeProducerKey(prefix)
-    if (normalized === key || normalized.startsWith(`${key} `)) return prefix
+    if (normalized === key || normalized.startsWith(`${key} `)) {
+      const prefixTokens = prefix.trim().split(/\s+/).length
+      return { producer: PRODUCER_ALIASES.get(key) ?? prefix, tokens: prefixTokens }
+    }
   }
-  return first || label
+  return { producer: first || label, tokens: Math.min(1, tokens.length) }
 }
 
-function cuveeAfterProducer(label: string, producer: string) {
+function cuveeAfterProducer(label: string, producerTokens: number) {
   const tokens = label.trim().split(/\s+/)
-  const producerTokens = producer.trim().split(/\s+/).length
   return tokens.slice(producerTokens).join(" ").replace(/^[-–—]\s*/, "").trim()
 }
 
