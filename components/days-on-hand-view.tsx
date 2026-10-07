@@ -17,7 +17,7 @@ import {
   type SupplyLine,
 } from "@/lib/supply"
 import type { Books } from "@/lib/types"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -41,6 +41,14 @@ const bandLabel: Record<DaysOnHandBand, string> = {
   idle: "No stock",
   unknown: "No sales pace",
 }
+
+const OUTFIELD_COLUMNS = [
+  "Lead Team Member",
+  "Account Name",
+  "Order Date",
+  "Line Item Product Variation Name",
+  "Line Item Quantity",
+] as const
 
 const bandStyle: Record<DaysOnHandBand, string> = {
   out: "bg-out/15 text-out",
@@ -109,39 +117,56 @@ export function DaysOnHandView({ books }: { books: Books }) {
         <Kpi label="≤ 14 days on hand" value={String(summary.urgent)} detail="Low cover at current pace" />
       </section>
 
-      <section className="w-full rounded-xl bg-card p-5 ring-1 ring-foreground/10 md:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4 lg:gap-8">
-          <div>
-            <h2 className="font-heading text-xl tracking-tight">Order history upload</h2>
-            <p className="mt-1 max-w-xl text-xs leading-5 text-muted-foreground">
-              Use an Outfield Deals export (
-              <span className="font-mono">Lead Team Member</span>,{" "}
-              <span className="font-mono">Account Name</span>, <span className="font-mono">Order Date</span>,{" "}
-              <span className="font-mono">Line Item Product Variation Name</span>,{" "}
-              <span className="font-mono">Line Item Quantity</span>) or a simple CSV with SKU/Label, date, and
-              bottles. Re-upload replaces the previous file; inventory counts stay as uploaded.
+      <section className="w-full rounded-xl bg-card ring-1 ring-foreground/10">
+        <div className="flex flex-col gap-3 border-b border-border px-5 py-4 md:flex-row md:items-start md:justify-between md:px-6 md:py-5">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-heading text-xl tracking-tight">Order history</h2>
+              {books.orderHistoryImportedAt ? (
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+                  {formatCount(orderLineCount)} lines · {formatWhen(books.orderHistoryImportedAt)}
+                </span>
+              ) : (
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] text-muted-foreground">
+                  No file loaded
+                </span>
+              )}
+            </div>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+              Import sales history to calculate pace. Re-upload replaces the previous file; on-hand inventory is
+              unchanged.
             </p>
-            {books.orderHistoryImportedAt ? (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Last import: {formatWhen(books.orderHistoryImportedAt)} · {orderLineCount} lines
-              </p>
-            ) : (
-              <p className="mt-2 text-xs text-muted-foreground">No order file uploaded yet.</p>
-            )}
           </div>
           <a
             href="/order-history-template.csv"
             download
-            className="text-xs underline-offset-2 hover:underline"
+            className={buttonVariants({ variant: "outline", size: "sm", className: "shrink-0" })}
           >
             Download template
           </a>
         </div>
-        <div className="mt-5 grid w-full gap-4 lg:grid-cols-[minmax(0,2fr)_auto_auto] lg:items-end">
+
+        <div className="grid gap-5 px-5 py-4 md:px-6 md:py-5 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start lg:gap-8">
           <OrderHistoryUpload />
-          <PaceWindowForm key={windowDays} windowDays={windowDays} />
-          {orderLineCount > 0 ? <ClearHistoryButton /> : null}
+          <aside className="rounded-lg bg-muted/35 px-4 py-3 ring-1 ring-foreground/5">
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Pace window</p>
+            <PaceWindowForm key={windowDays} windowDays={windowDays} />
+            {orderLineCount > 0 ? (
+              <ClearHistoryButton className="mt-3 w-full justify-start px-0 text-muted-foreground hover:text-foreground" />
+            ) : null}
+          </aside>
         </div>
+
+        <details className="border-t border-border px-5 py-3 text-sm text-muted-foreground md:px-6">
+          <summary className="cursor-pointer text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
+            Outfield column reference
+          </summary>
+          <ul className="mt-3 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+            {OUTFIELD_COLUMNS.map((column) => (
+              <li key={column}>{column}</li>
+            ))}
+          </ul>
+        </details>
       </section>
 
       <section className="flex flex-wrap items-center gap-3">
@@ -295,30 +320,28 @@ function PaceWindowForm({ windowDays }: { windowDays: number }) {
   }
 
   return (
-    <form onSubmit={save} className="flex flex-wrap items-end gap-2">
-      <div className="grid gap-1.5">
-        <Label htmlFor="pace-window" className="text-xs">
-          Pace window (days)
-        </Label>
-        <Select value={value} onValueChange={(next) => setValue(next ?? String(windowDays))}>
-          <SelectTrigger id="pace-window" className="w-[7rem]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="28">28</SelectItem>
-            <SelectItem value="60">60</SelectItem>
-            <SelectItem value="90">90</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <Button type="submit" variant="secondary" disabled={pending || Number(value) === windowDays}>
-        {pending ? "Saving…" : "Apply"}
+    <form onSubmit={save} className="mt-2 flex items-center gap-2">
+      <Label htmlFor="pace-window" className="sr-only">
+        Pace window in days
+      </Label>
+      <Select value={value} onValueChange={(next) => setValue(next ?? String(windowDays))}>
+        <SelectTrigger id="pace-window" className="h-9 flex-1 bg-background">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="28">28 days</SelectItem>
+          <SelectItem value="60">60 days</SelectItem>
+          <SelectItem value="90">90 days</SelectItem>
+        </SelectContent>
+      </Select>
+      <Button type="submit" size="sm" variant="secondary" disabled={pending || Number(value) === windowDays}>
+        {pending ? "…" : "Apply"}
       </Button>
     </form>
   )
 }
 
-function ClearHistoryButton() {
+function ClearHistoryButton({ className }: { className?: string }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
@@ -335,7 +358,7 @@ function ClearHistoryButton() {
   }
 
   return (
-    <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={clear}>
+    <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={clear} className={className}>
       {pending ? "Clearing…" : "Clear uploaded orders"}
     </Button>
   )

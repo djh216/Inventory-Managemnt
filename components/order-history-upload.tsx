@@ -7,7 +7,7 @@ import { importOrderHistoryCsv } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-export function OrderHistoryUpload({ compact }: { compact?: boolean }) {
+export function OrderHistoryUpload() {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [pending, startTransition] = useTransition()
@@ -30,8 +30,7 @@ export function OrderHistoryUpload({ compact }: { compact?: boolean }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    upload(data)
+    upload(new FormData(event.currentTarget))
   }
 
   function onDrop(event: DragEvent<HTMLDivElement>) {
@@ -49,18 +48,22 @@ export function OrderHistoryUpload({ compact }: { compact?: boolean }) {
     upload(data)
   }
 
+  function openPicker() {
+    inputRef.current?.click()
+  }
+
   return (
-    <form onSubmit={submit} encType="multipart/form-data" className={cn("w-full min-w-0", compact && "w-full")}>
+    <form onSubmit={submit} encType="multipart/form-data" className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
       <div
         role="button"
         tabIndex={0}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault()
-            inputRef.current?.click()
+            openPicker()
           }
         }}
-        onClick={() => inputRef.current?.click()}
+        onClick={openPicker}
         onDragOver={(event) => {
           event.preventDefault()
           setDragOver(true)
@@ -68,14 +71,18 @@ export function OrderHistoryUpload({ compact }: { compact?: boolean }) {
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
         className={cn(
-          "cursor-pointer rounded-lg border border-dashed px-4 py-5 text-center transition-colors",
-          dragOver ? "border-primary bg-primary/5" : "border-border bg-muted/30 hover:bg-muted/50",
-          compact ? "py-4" : "py-6",
+          "flex min-h-12 min-w-0 flex-1 cursor-pointer items-center rounded-lg border border-dashed px-4 py-3 transition-colors sm:py-2.5",
+          dragOver ? "border-primary bg-primary/5" : "border-border/80 bg-background hover:border-border hover:bg-muted/40",
         )}
       >
-        <p className="text-sm font-medium">{pending ? "Uploading…" : "Drop order history CSV here"}</p>
-        <p className="mt-1 text-xs text-muted-foreground">or click to choose a file</p>
-        {fileName ? <p className="mt-2 font-mono text-[11px] text-muted-foreground">{fileName}</p> : null}
+        <div className="min-w-0 text-left">
+          <p className="truncate text-sm text-foreground">
+            {pending ? "Uploading…" : fileName ? fileName : "Drop CSV here or click to browse"}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {fileName ? "Ready to upload" : "Outfield export or SKU · date · bottles"}
+          </p>
+        </div>
         <input
           ref={inputRef}
           name="file"
@@ -88,14 +95,9 @@ export function OrderHistoryUpload({ compact }: { compact?: boolean }) {
           }}
         />
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <Button type="submit" disabled={pending || !fileName}>
-          {pending ? "Uploading…" : "Upload orders"}
-        </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={() => inputRef.current?.click()} disabled={pending}>
-          Browse…
-        </Button>
-      </div>
+      <Button type="submit" disabled={pending || !fileName} className="shrink-0 sm:min-w-[7.5rem]">
+        {pending ? "Uploading…" : "Upload"}
+      </Button>
     </form>
   )
 }
