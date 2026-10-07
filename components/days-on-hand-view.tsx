@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { SidebarOrderHistory } from "@/components/sidebar-order-history"
 import { formatCount, wineName } from "@/lib/format"
 import {
   DAYS_ON_HAND_TABLE_WINDOWS,
@@ -12,7 +11,6 @@ import {
   formatDaysOnHandTable,
   formatDaysRemaining,
   paceAtWindow,
-  salesPaceWindowDays,
   supplyLines,
   type DaysOnHandBand,
   type PaceAtWindow,
@@ -65,7 +63,6 @@ type TableRow = {
 export function DaysOnHandView({ books }: { books: Books }) {
   const summary = daysOnHandSummary(books)
   const orderLineCount = books.orderHistory?.length ?? 0
-  const paceWindowDays = salesPaceWindowDays(books)
   const rows = useMemo(() => buildTableRows(books), [books])
 
   const [query, setQuery] = useState("")
@@ -143,14 +140,6 @@ export function DaysOnHandView({ books }: { books: Books }) {
           detail="Among SKUs with a calculated pace"
         />
         <Kpi label="≤ 14 days on hand" value={String(summary.urgent)} detail="Low cover at current pace" />
-      </section>
-
-      <section className="rounded-xl bg-sidebar p-4 text-sidebar-foreground ring-1 ring-sidebar-border md:hidden">
-        <SidebarOrderHistory
-          orderLineCount={orderLineCount}
-          orderHistoryImportedAt={books.orderHistoryImportedAt ?? null}
-          salesPaceWindowDays={paceWindowDays}
-        />
       </section>
 
       <section className="flex flex-wrap items-center gap-3">

@@ -35,13 +35,13 @@ export function AppNav({
       pathname={pathname}
       footer={<UploadResets orderLineCount={orderLineCount} />}
       alertCount={alertCount}
-      orderHistoryPanel={
+      orderHistoryPanel={() => (
         <SidebarOrderHistory
           orderLineCount={orderLineCount}
           orderHistoryImportedAt={orderHistoryImportedAt}
           salesPaceWindowDays={salesPaceWindowDays}
         />
-      }
+      )}
     />
   )
 }
