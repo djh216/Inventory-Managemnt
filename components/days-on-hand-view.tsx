@@ -243,7 +243,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
         <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-8 text-center text-sm text-muted-foreground">
           <p className="font-medium text-foreground">Upload order history to calculate days on hand</p>
           <p className="mx-auto mt-2 max-w-lg leading-6">
-            The dashboard needs recent sales volume per SKU. Upload a CSV above, or post shipments on the Orders page.
+            The dashboard needs recent sales volume per SKU. Upload a CSV above, or post shipments from the catalog.
           </p>
         </div>
       ) : null}

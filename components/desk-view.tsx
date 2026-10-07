@@ -55,8 +55,8 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => request({ type: "ship" })}>Post a shipment</Button>
-          <Link href="/orders" className={buttonVariants({ variant: "outline" })}>
-            Order history
+          <Link href="/days-on-hand" className={buttonVariants({ variant: "outline" })}>
+            Days on hand
           </Link>
         </div>
       </header>
@@ -90,8 +90,8 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
         </div>
         {alerts.length === 0 ? (
           <p className="px-4 py-10 text-sm text-muted-foreground">
-            No reorder alerts right now. Post customer shipments under Orders so the system can calculate
-            days remaining; alerts appear when cover falls inside each wine&apos;s lead time.
+            No reorder alerts right now. Post shipments from the catalog or upload order history on Days on hand
+            so the system can calculate days remaining; alerts appear when cover falls inside each wine&apos;s lead time.
           </p>
         ) : (
           <div className="overflow-x-auto">
