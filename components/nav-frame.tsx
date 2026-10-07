@@ -89,12 +89,18 @@ export function NavFrame({
         <div className="shrink-0 px-3">
           <NavLinks pathname={pathname} stacked alertCount={alertCount} />
         </div>
+        {showOrderHistory ? <div className="min-h-0 flex-1" aria-hidden /> : null}
         {showOrderHistory && orderHistoryPanel ? (
-          <div className="mt-3 min-h-0 flex-1 overflow-y-auto border-t border-sidebar-border px-4 py-4">
+          <div className="mt-auto max-h-[min(72vh,calc(100vh-11rem))] shrink-0 overflow-y-auto border-t border-sidebar-border px-4 py-4">
             {orderHistoryPanel}
           </div>
         ) : null}
-        <div className="mt-auto shrink-0 space-y-3 border-t border-sidebar-border p-4">
+        <div
+          className={cn(
+            "shrink-0 space-y-3 border-t border-sidebar-border p-4",
+            !showOrderHistory && "mt-auto",
+          )}
+        >
           <p className="text-[11px] leading-5 text-sidebar-foreground/55">
             Post shipments as orders, receive against winery POs, and tune lead time per wine in the catalog.
           </p>
