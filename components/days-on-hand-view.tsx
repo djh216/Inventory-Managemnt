@@ -79,9 +79,14 @@ export function DaysOnHandView({ books }: { books: Books }) {
   const [band, setBand] = useState<FilterBand>("all")
   const [sortKey, setSortKey] = useState<SortKey>("days30")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
+  const [showNoStock, setShowNoStock] = useState(false)
+
+  const inStockCount = useMemo(() => rows.filter((row) => row.line.available > 0).length, [rows])
+  const tablePool = showNoStock ? rows.length : inStockCount
 
   const filtered = useMemo(() => {
     const matched = rows.filter((row) => {
+      if (!showNoStock && row.line.available <= 0) return false
       const statusBand = daysOnHandBandFromPace(
         row.line.available,
         row.pace30.dailyRate,
@@ -93,7 +98,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
       return hay.includes(query.trim().toLowerCase())
     })
     return sortTableRows(matched, sortKey, sortDir)
-  }, [rows, band, query, sortKey, sortDir])
+  }, [rows, band, query, sortKey, sortDir, showNoStock])
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -204,8 +209,20 @@ export function DaysOnHandView({ books }: { books: Books }) {
             <SelectItem value="idle">No stock</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          type="button"
+          variant={showNoStock ? "secondary" : "outline"}
+          size="sm"
+          aria-pressed={showNoStock}
+          onClick={() => setShowNoStock((value) => !value)}
+        >
+          {showNoStock ? "Including no-stock SKUs" : "Hide no-stock SKUs"}
+        </Button>
         <p className="text-xs text-muted-foreground">
-          Showing {filtered.length} of {rows.length} active SKUs
+          Showing {filtered.length} of {tablePool} active SKUs
+          {!showNoStock && rows.length > inStockCount
+            ? ` (${formatCount(rows.length - inStockCount)} hidden)`
+            : null}
         </p>
       </section>
 
