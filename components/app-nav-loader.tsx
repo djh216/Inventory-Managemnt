@@ -10,6 +10,8 @@ export async function AppNavLoader() {
       orderLineCount={books.orderHistory?.length ?? 0}
       orderHistoryImportedAt={books.orderHistoryImportedAt ?? null}
       salesPaceWindowDays={salesPaceWindowDays(books)}
+      skuCount={books.wines.length}
+      inventoryImportedAt={books.inventoryImportedAt ?? null}
     />
   )
 }

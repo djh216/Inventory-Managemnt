@@ -2,11 +2,18 @@
 
 import { revalidatePath } from "next/cache"
 import { applyCreateWine, applyPosting, applyReorder } from "@/lib/posting"
+import { booksFromUpload, parseInventoryCsv } from "@/lib/csv-import"
 import {
   applyOrderHistoryImport,
   parseOrderHistoryCsv,
 } from "@/lib/order-history-import"
-import { booksWithoutOrderHistory, readBooks, restoreUploadBooks, writeBooks } from "@/lib/store"
+import {
+  booksWithInventoryReset,
+  booksWithoutOrderHistory,
+  readBooks,
+  restoreUploadBooks,
+  writeBooks,
+} from "@/lib/store"
 import type { ActionResult, CreateWineInput, PostingInput } from "@/lib/types"
 
 function persist(books: ReturnType<typeof readBooks>): ActionResult | null {
@@ -100,6 +107,28 @@ export async function setReorder(wineId: string, reorderCases: number): Promise<
   const failed = persist(result.books)
   if (failed) return failed
   return { ok: true, message: result.message, wineId: result.wineId }
+}
+
+export async function importInventoryCsv(formData: FormData): Promise<ActionResult> {
+  const file = formData.get("file")
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "Choose a CSV file to upload." }
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    return { ok: false, error: "Inventory must be 8 MB or smaller." }
+  }
+  const text = await file.text()
+  const parsed = parseInventoryCsv(text)
+  if ("error" in parsed) return { ok: false, error: parsed.error }
+  const uploaded = booksFromUpload(parsed.rows)
+  uploaded.inventoryImportedAt = new Date().toISOString()
+  const next = booksWithInventoryReset(readBooks(), uploaded)
+  const failed = persist(next)
+  if (failed) return failed
+  return {
+    ok: true,
+    message: `Imported ${parsed.rows.length} SKUs. Order history was left in place.`,
+  }
 }
 
 export async function importOrderHistoryCsv(formData: FormData): Promise<ActionResult> {

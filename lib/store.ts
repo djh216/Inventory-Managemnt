@@ -43,6 +43,10 @@ function migrateBooks(books: Books): Books {
     next = { ...next, orderHistoryImportedAt: null }
     changed = true
   }
+  if (next.inventoryImportedAt === undefined) {
+    next = { ...next, inventoryImportedAt: null }
+    changed = true
+  }
   if (next.salesPaceWindowDays === undefined || next.salesPaceWindowDays === 28) {
     next = { ...next, salesPaceWindowDays: 30 }
     changed = true

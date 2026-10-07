@@ -40,20 +40,38 @@ export function inventoryCsvPath() {
   return path.join(process.cwd(), "data", INVENTORY_UPLOAD_FILE)
 }
 
-export function readInventoryCsv(filePath = inventoryCsvPath()): CsvRow[] {
-  const raw = fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, "")
-  const lines = raw.split(/\r?\n/).filter((line) => line.trim().length > 0)
-  if (lines.length < 2) return []
+const INVENTORY_HEADER = ["label", "sku", "quantity on hand", "quantity available"]
+
+export function parseInventoryCsv(text: string): { rows: CsvRow[] } | { error: string } {
+  const lines = text
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0)
+  if (lines.length < 2) {
+    return { error: "The inventory file needs a header and at least one wine." }
+  }
+  const header = splitCsvFields(lines[0]).map((part) => part.trim().toLowerCase())
+  const headerMatches = INVENTORY_HEADER.every((name, index) => header[index] === name)
+  if (!headerMatches) {
+    return { error: "Use columns Label, SKU, Quantity On Hand, and Quantity Available." }
+  }
   const rows: CsvRow[] = []
   for (let index = 1; index < lines.length; index += 1) {
     const row = parseCsvLine(lines[index])
     if (!row) continue
     rows.push(row)
   }
-  return rows
+  if (rows.length === 0) return { error: "No wine rows could be read from that file." }
+  return { rows }
 }
 
-function parseCsvLine(line: string): CsvRow | null {
+export function readInventoryCsv(filePath = inventoryCsvPath()): CsvRow[] {
+  const parsed = parseInventoryCsv(fs.readFileSync(filePath, "utf8"))
+  if ("error" in parsed) return []
+  return parsed.rows
+}
+
+function splitCsvFields(line: string) {
   const parts: string[] = []
   let current = ""
   let inQuotes = false
@@ -71,6 +89,11 @@ function parseCsvLine(line: string): CsvRow | null {
     current += char
   }
   parts.push(current)
+  return parts
+}
+
+function parseCsvLine(line: string): CsvRow | null {
+  const parts = splitCsvFields(line)
   if (parts.length < 4) return null
   const label = parts[0].trim()
   if (!label) return null
@@ -149,6 +172,7 @@ export function booksFromUpload(rows: CsvRow[]): Books {
     movements: [],
     orderHistory: [],
     orderHistoryImportedAt: null,
+    inventoryImportedAt: null,
     salesPaceWindowDays: 30,
   }
 }

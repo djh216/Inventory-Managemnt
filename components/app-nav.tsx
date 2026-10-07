@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { resetBooks } from "@/lib/actions"
 import { ClearHistoryButton } from "@/components/order-history-controls"
+import { SidebarInventoryUpload } from "@/components/sidebar-inventory-upload"
 import { SidebarOrderHistory } from "@/components/sidebar-order-history"
 import { NavFrame } from "@/components/nav-frame"
 import { Button } from "@/components/ui/button"
@@ -23,11 +24,15 @@ export function AppNav({
   orderLineCount = 0,
   orderHistoryImportedAt = null,
   salesPaceWindowDays = 30,
+  skuCount = 0,
+  inventoryImportedAt = null,
 }: {
   alertCount?: number
   orderLineCount?: number
   orderHistoryImportedAt?: string | null
   salesPaceWindowDays?: number
+  skuCount?: number
+  inventoryImportedAt?: string | null
 }) {
   const pathname = usePathname()
   return (
@@ -36,11 +41,16 @@ export function AppNav({
       footer={<UploadResets orderLineCount={orderLineCount} />}
       alertCount={alertCount}
       orderHistoryPanel={() => (
-        <SidebarOrderHistory
-          orderLineCount={orderLineCount}
-          orderHistoryImportedAt={orderHistoryImportedAt}
-          salesPaceWindowDays={salesPaceWindowDays}
-        />
+        <div className="space-y-4">
+          <SidebarInventoryUpload skuCount={skuCount} inventoryImportedAt={inventoryImportedAt} />
+          <div className="border-t border-sidebar-border pt-4">
+            <SidebarOrderHistory
+              orderLineCount={orderLineCount}
+              orderHistoryImportedAt={orderHistoryImportedAt}
+              salesPaceWindowDays={salesPaceWindowDays}
+            />
+          </div>
+        </div>
       )}
     />
   )

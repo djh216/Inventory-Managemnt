@@ -94,6 +94,8 @@ export type Books = {
   /** CSV order history for sales-pace calculations. */
   orderHistory?: OrderHistoryLine[]
   orderHistoryImportedAt?: string | null
+  /** When the current on-hand file was uploaded. Null means the Oct 6 baseline. */
+  inventoryImportedAt?: string | null
   /** Rolling window for average daily sales (default 30). */
   salesPaceWindowDays?: number
 }

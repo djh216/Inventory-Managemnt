@@ -1,7 +1,9 @@
 import assert from "node:assert/strict"
+import fs from "node:fs"
 import test from "node:test"
-import { booksFromUpload, importBooksFromCsv, inventoryCsvPath, readInventoryCsv } from "./csv-import"
+import { booksFromUpload, importBooksFromCsv, inventoryCsvPath, parseInventoryCsv, readInventoryCsv } from "./csv-import"
 import { winePosition } from "./inventory"
+import { booksWithInventoryReset } from "./store"
 
 test("loads the Oct 6 upload with 276 SKUs", () => {
   const rows = readInventoryCsv(inventoryCsvPath())
@@ -33,6 +35,58 @@ test("maps on hand, available, and committed bottles from the CSV", () => {
   for (const line of books.stock) {
     assert.ok(line.onHandBottles >= line.allocatedBottles)
   }
+})
+
+test("parses an inventory upload and rejects a different CSV shape", () => {
+  const parsed = parseInventoryCsv(
+    'Label,SKU,Quantity On Hand,Quantity Available\n"Wine, Special",SKU-1,"1,200",10\n',
+  )
+  assert.ok(!("error" in parsed))
+  if ("error" in parsed) return
+  assert.equal(parsed.rows.length, 1)
+  assert.equal(parsed.rows[0]?.label, "Wine, Special")
+  assert.equal(parsed.rows[0]?.onHand, 1200)
+  assert.equal(parsed.rows[0]?.available, 10)
+
+  const rejected = parseInventoryCsv("Lead Team Member,Account Name\nA,B\n")
+  assert.ok("error" in rejected)
+
+  const fromFile = parseInventoryCsv(fs.readFileSync(inventoryCsvPath(), "utf8"))
+  assert.ok(!("error" in fromFile))
+  if ("error" in fromFile) return
+  assert.equal(fromFile.rows.length, 276)
+})
+
+test("an inventory upload replaces stock and keeps order history", () => {
+  const current = importBooksFromCsv()
+  current.orderHistory = [
+    {
+      id: "h-1",
+      at: "2026-04-06T00:00:00.000Z",
+      wineId: current.wines[0]?.id ?? "w-1",
+      bottles: 6,
+      account: "Pizzeria Luca",
+      reference: "upload",
+    },
+  ]
+  current.orderHistoryImportedAt = "2026-04-07T00:00:00.000Z"
+  current.salesPaceWindowDays = 90
+  const parsed = parseInventoryCsv(
+    "Label,SKU,Quantity On Hand,Quantity Available\nExample Wine,SKU-9,24,24\n",
+  )
+  assert.ok(!("error" in parsed))
+  if ("error" in parsed) return
+  const uploaded = booksFromUpload(parsed.rows)
+  uploaded.inventoryImportedAt = "2026-10-07T00:00:00.000Z"
+  const next = booksWithInventoryReset(current, uploaded)
+  assert.equal(next.wines.length, 1)
+  assert.equal(next.wines[0]?.sku, "SKU-9")
+  assert.equal(next.stock[0]?.onHandBottles, 24)
+  assert.equal(next.movements.length, 0)
+  assert.equal(next.orderHistory?.length, 1)
+  assert.equal(next.orderHistoryImportedAt, "2026-04-07T00:00:00.000Z")
+  assert.equal(next.salesPaceWindowDays, 90)
+  assert.equal(next.inventoryImportedAt, "2026-10-07T00:00:00.000Z")
 })
 
 test("assigns labels and SKUs for rows missing a product code", () => {
