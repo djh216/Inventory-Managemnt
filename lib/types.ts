@@ -76,7 +76,7 @@ export type Movement = {
   note: string
 }
 
-/** Uploaded outbound orders — used for sales pace only (does not change on-hand). */
+/** Uploaded outbound orders. Lines after the inventory file date also reduce on-hand. */
 export type OrderHistoryLine = {
   id: string
   at: string
@@ -84,6 +84,8 @@ export type OrderHistoryLine = {
   bottles: number
   account: string
   reference: string
+  /** True once this line has been removed from on-hand because it is after the inventory date. */
+  inventoryDeducted?: boolean
 }
 
 export type Books = {
@@ -96,6 +98,8 @@ export type Books = {
   orderHistoryImportedAt?: string | null
   /** When the current on-hand file was uploaded. Null means the Oct 6 baseline. */
   inventoryImportedAt?: string | null
+  /** Snapshot day from the inventory file name (YYYY-MM-DD). Null means Oct 6, 2026. */
+  inventoryAsOf?: string | null
   /** Rolling window for average daily sales (default 30). */
   salesPaceWindowDays?: number
 }

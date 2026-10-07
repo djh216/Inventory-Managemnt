@@ -5,6 +5,8 @@ import type { Books, Location, StockLine, Wine, WineColor } from "./types"
 export const INVENTORY_UPLOAD_FILE = "inventory-upload.csv"
 export const UPLOAD_REFERENCE = "UPLOAD-100626"
 export const UPLOAD_DATE = "2026-10-06T12:00:00.000Z"
+/** Day the bundled inventory file represents. Source name: Cursor Initial Inventory Upload 10.6.26.csv. */
+export const BASELINE_INVENTORY_DAY = "2026-10-06"
 
 type CsvRow = {
   label: string
@@ -204,8 +206,37 @@ export function booksFromUpload(rows: CsvRow[]): Books {
     orderHistory: [],
     orderHistoryImportedAt: null,
     inventoryImportedAt: null,
+    inventoryAsOf: null,
     salesPaceWindowDays: 30,
   }
+}
+
+/** Read a snapshot day from an inventory file name, such as `Inventory 10.6.26.csv`. */
+export function inventoryDateFromFileName(fileName: string): string | null {
+  const base = fileName.replace(/\.[^.]+$/, "")
+  const iso = /(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/.exec(base)
+  if (iso) {
+    const day = calendarDay(Number(iso[1]), Number(iso[2]), Number(iso[3]))
+    if (day) return day
+  }
+  const us = /(\d{1,2})[._-](\d{1,2})[._-](\d{2}|\d{4})/g
+  let found: string | null = null
+  for (const match of base.matchAll(us)) {
+    let year = Number(match[3])
+    if (year < 100) year += 2000
+    const day = calendarDay(year, Number(match[1]), Number(match[2]))
+    if (day) found = day
+  }
+  return found
+}
+
+function calendarDay(year: number, month: number, day: number): string | null {
+  if (month < 1 || month > 12 || day < 1 || day > 31 || year < 2000 || year > 2100) return null
+  const date = new Date(Date.UTC(year, month - 1, day))
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null
+  const monthText = String(month).padStart(2, "0")
+  const dayText = String(day).padStart(2, "0")
+  return `${year}-${monthText}-${dayText}`
 }
 
 export function importBooksFromCsv(filePath = inventoryCsvPath()): Books {

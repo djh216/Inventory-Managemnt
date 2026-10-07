@@ -51,6 +51,62 @@ test("clearing inventory keeps the order history upload", () => {
   assert.equal(next.salesPaceWindowDays, 90)
 })
 
+test("a later inventory file stops deducting orders already in that snapshot", () => {
+  const uploaded = seedBooks()
+  const wine = uploaded.wines[0]
+  const line = uploaded.stock.find((item) => item.wineId === wine?.id)
+  assert.ok(wine)
+  assert.ok(line)
+  const onHand = line.onHandBottles
+  const current: Books = structuredClone(uploaded)
+  current.orderHistory = [
+    {
+      id: "h-1",
+      at: "2026-10-07T12:00:00.000Z",
+      wineId: wine.id,
+      bottles: 5,
+      account: "Luca",
+      reference: "PO-7",
+    },
+  ]
+  current.inventoryAsOf = "2026-10-06"
+
+  const afterOctober6 = booksWithInventoryReset(current, structuredClone(uploaded), "2026-10-06")
+  assert.equal(afterOctober6.stock.find((item) => item.wineId === wine.id)?.onHandBottles, onHand - 5)
+  assert.equal(afterOctober6.orderHistory?.[0]?.inventoryDeducted, true)
+
+  const afterOctober8 = booksWithInventoryReset(afterOctober6, structuredClone(uploaded), "2026-10-08")
+  assert.equal(afterOctober8.stock.find((item) => item.wineId === wine.id)?.onHandBottles, onHand)
+  assert.equal(afterOctober8.orderHistory?.[0]?.inventoryDeducted, false)
+})
+
+test("clearing order history puts deducted bottles back", () => {
+  const current = seedBooks()
+  const wine = current.wines[0]
+  const line = current.stock.find((item) => item.wineId === wine?.id)
+  assert.ok(wine)
+  assert.ok(line)
+  const onHand = line.onHandBottles
+  current.orderHistory = [
+    {
+      id: "h-1",
+      at: "2026-10-07T12:00:00.000Z",
+      wineId: wine.id,
+      bottles: 8,
+      account: "Luca",
+      reference: "PO-8",
+      inventoryDeducted: true,
+    },
+  ]
+  line.onHandBottles -= 8
+  if (line.availableBottles !== undefined) line.availableBottles -= 8
+
+  const next = booksWithoutOrderHistory(current)
+  assert.equal(next.stock.find((item) => item.wineId === wine.id)?.onHandBottles, onHand)
+  assert.deepEqual(next.orderHistory, [])
+  assert.equal(current.orderHistory?.[0]?.inventoryDeducted, true)
+})
+
 test("clearing order history keeps inventory", () => {
   const current = seedBooks()
   const line = current.stock[0]

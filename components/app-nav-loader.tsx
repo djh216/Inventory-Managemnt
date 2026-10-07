@@ -1,4 +1,5 @@
 import { AppNav } from "@/components/app-nav"
+import { inventoryAsOfDay } from "@/lib/order-history-import"
 import { alertCount, salesPaceWindowDays } from "@/lib/supply"
 import { loadBooks } from "@/lib/store"
 
@@ -11,7 +12,7 @@ export async function AppNavLoader() {
       orderHistoryImportedAt={books.orderHistoryImportedAt ?? null}
       salesPaceWindowDays={salesPaceWindowDays(books)}
       skuCount={books.wines.length}
-      inventoryImportedAt={books.inventoryImportedAt ?? null}
+      inventoryAsOf={inventoryAsOfDay(books)}
     />
   )
 }

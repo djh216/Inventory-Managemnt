@@ -121,6 +121,30 @@ test("uploading the same file again leaves the existing orders in place", () => 
   assert.equal(again.books.orderHistory?.[0]?.id, "oh-1")
 })
 
+test("orders after the inventory date reduce on-hand and are not deducted twice", () => {
+  const csv = `SKU,Order Date,Bottles,Account,Reference
+100061550,2026-10-06,12,Luca,PO-SAME
+100061550,2026-10-07,10,Luca,PO-AFTER
+100061550,2026-10-08,4,Marco,PO-LATER`
+  const parsed = parseOrderHistoryCsv(csv)
+  assert.ok(Array.isArray(parsed))
+  const loaded = applyOrderHistoryImport(books(), parsed, "2026-10-09T00:00:00.000Z", () => "oh-1")
+  assert.equal(loaded.ok, true)
+  if (!loaded.ok) return
+  assert.equal(loaded.deductedBottles, 14)
+  assert.equal(loaded.deductedLines, 2)
+  assert.equal(loaded.books.stock[0]?.onHandBottles, 266)
+  assert.equal(loaded.books.stock[0]?.availableBottles, 266)
+  assert.equal(loaded.books.stock[0]?.allocatedBottles, 0)
+  const again = applyOrderHistoryImport(loaded.books, parsed, "2026-10-10T00:00:00.000Z", () => "oh-2")
+  assert.equal(again.ok, true)
+  if (!again.ok) return
+  assert.equal(again.imported, 0)
+  assert.equal(again.skipped, 3)
+  assert.equal(again.deductedBottles, 0)
+  assert.equal(again.books.stock[0]?.onHandBottles, 266)
+})
+
 test("uploaded orders drive days on hand without changing inventory", () => {
   const csv = `SKU,Order Date,Bottles
 100061550,2026-09-25,280`

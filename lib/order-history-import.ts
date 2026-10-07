@@ -1,4 +1,5 @@
-import type { Books, OrderHistoryLine, Wine } from "./types"
+import { BASELINE_INVENTORY_DAY } from "./csv-import"
+import type { Books, OrderHistoryLine, StockLine, Wine } from "./types"
 
 const DEFAULT_PACE_WINDOW_DAYS = 30
 
@@ -20,6 +21,8 @@ export type OrderHistoryImportResult =
       skipped: number
       unmatched: number
       unmatchedSamples: string[]
+      deductedLines: number
+      deductedBottles: number
     }
   | { ok: false; error: string }
 
@@ -185,15 +188,83 @@ export function applyOrderHistoryImport(
     orderHistoryImportedAt: importedAt,
     salesPaceWindowDays: books.salesPaceWindowDays ?? DEFAULT_PACE_WINDOW_DAYS,
   }
+  const deducted = applyInventoryOrderDeductions(next)
 
   return {
     ok: true,
-    books: next,
+    books: deducted.books,
     imported,
     skipped,
     unmatched,
     unmatchedSamples,
+    deductedLines: deducted.deductedLines,
+    deductedBottles: deducted.deductedBottles,
   }
+}
+
+export function inventoryAsOfDay(books: { inventoryAsOf?: string | null }) {
+  return books.inventoryAsOf || BASELINE_INVENTORY_DAY
+}
+
+export function orderIsAfterInventory(orderAt: string, asOfDay: string) {
+  const day = orderAt.slice(0, 10)
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) && day > asOfDay
+}
+
+/** Remove order quantities dated after the inventory snapshot. Each line is applied once. */
+export function applyInventoryOrderDeductions(books: Books): {
+  books: Books
+  deductedLines: number
+  deductedBottles: number
+} {
+  const asOf = inventoryAsOfDay(books)
+  const pending = (books.orderHistory ?? []).filter(
+    (line) => !line.inventoryDeducted && orderIsAfterInventory(line.at, asOf),
+  )
+  if (pending.length === 0) return { books, deductedLines: 0, deductedBottles: 0 }
+
+  const next = structuredClone(books)
+  let deductedLines = 0
+  let deductedBottles = 0
+  for (const line of next.orderHistory ?? []) {
+    if (line.inventoryDeducted || !orderIsAfterInventory(line.at, asOf)) continue
+    if (!addBottles(next, line.wineId, -line.bottles)) continue
+    line.inventoryDeducted = true
+    deductedLines += 1
+    deductedBottles += line.bottles
+  }
+  if (deductedLines === 0) return { books, deductedLines: 0, deductedBottles: 0 }
+  return { books: next, deductedLines, deductedBottles }
+}
+
+/** Put back bottles that uploaded orders removed from the snapshot. */
+export function restoreDeductedOrderInventory(books: Books): Books {
+  if (!(books.orderHistory ?? []).some((line) => line.inventoryDeducted)) return books
+  const next = structuredClone(books)
+  for (const line of next.orderHistory ?? []) {
+    if (!line.inventoryDeducted) continue
+    if (!addBottles(next, line.wineId, line.bottles)) continue
+    line.inventoryDeducted = false
+  }
+  return next
+}
+
+function addBottles(books: Books, wineId: string, delta: number) {
+  let line: StockLine | undefined = books.stock.find((item) => item.wineId === wineId)
+  if (!line) {
+    if (!books.wines.some((wine) => wine.id === wineId)) return false
+    line = {
+      wineId,
+      locationId: books.locations[0]?.id ?? "main",
+      onHandBottles: 0,
+      availableBottles: 0,
+      allocatedBottles: 0,
+    }
+    books.stock.push(line)
+  }
+  line.onHandBottles += delta
+  if (line.availableBottles !== undefined) line.availableBottles += delta
+  return true
 }
 
 function orderLineKey(line: Pick<OrderHistoryLine, "wineId" | "at" | "bottles" | "account" | "reference">) {

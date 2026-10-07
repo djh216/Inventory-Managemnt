@@ -125,7 +125,7 @@ export function ClearHistoryButton({
         <DialogHeader>
           <DialogTitle>Clear the order history upload?</DialogTitle>
           <DialogDescription>
-            Uploaded order lines are removed. Inventory counts and posted shipments stay on the book.
+            Uploaded order lines are removed. Bottles taken out for orders after the inventory date are put back. Posted shipments stay.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

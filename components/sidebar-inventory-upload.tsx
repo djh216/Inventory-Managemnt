@@ -3,15 +3,15 @@
 import Link from "next/link"
 import { InventoryUpload } from "@/components/inventory-upload"
 import { buttonVariants } from "@/components/ui/button"
-import { formatCount, formatWhen } from "@/lib/format"
+import { formatCount, formatInventoryDay } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 export function SidebarInventoryUpload({
   skuCount,
-  inventoryImportedAt,
+  inventoryAsOf,
 }: {
   skuCount: number
-  inventoryImportedAt: string | null
+  inventoryAsOf: string
 }) {
   return (
     <div className="space-y-2 text-sidebar-foreground">
@@ -28,17 +28,11 @@ export function SidebarInventoryUpload({
           Template
         </Link>
       </div>
-      {inventoryImportedAt ? (
-        <p className="text-[11px] leading-4 text-sidebar-foreground/60">
-          {formatCount(skuCount)} SKUs · {formatWhen(inventoryImportedAt)}
-        </p>
-      ) : (
-        <p className="text-[11px] leading-4 text-sidebar-foreground/60">
-          {formatCount(skuCount)} SKUs · Oct 6 upload
-        </p>
-      )}
       <p className="text-[11px] leading-4 text-sidebar-foreground/60">
-        Re-upload replaces on-hand counts and postings. Order history stays.
+        {formatCount(skuCount)} SKUs · as of {formatInventoryDay(inventoryAsOf)}
+      </p>
+      <p className="text-[11px] leading-4 text-sidebar-foreground/60">
+        Re-upload replaces on-hand counts and postings. Name the file with the snapshot date, such as 10.6.26. Orders after that date come out of inventory.
       </p>
       <InventoryUpload layout="sidebar" />
     </div>

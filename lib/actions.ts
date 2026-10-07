@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache"
 import { applyCreateWine, applyPosting, applyReorder } from "@/lib/posting"
-import { booksFromUpload, parseInventoryCsv } from "@/lib/csv-import"
+import { booksFromUpload, inventoryDateFromFileName, parseInventoryCsv } from "@/lib/csv-import"
 import {
   applyOrderHistoryImport,
+  inventoryAsOfDay,
   parseOrderHistoryCsv,
 } from "@/lib/order-history-import"
 import {
@@ -14,6 +15,7 @@ import {
   restoreUploadBooks,
   writeBooks,
 } from "@/lib/store"
+import { formatInventoryDay } from "@/lib/format"
 import type { ActionResult, CreateWineInput, PostingInput } from "@/lib/types"
 
 function persist(books: ReturnType<typeof readBooks>): ActionResult | null {
@@ -117,17 +119,32 @@ export async function importInventoryCsv(formData: FormData): Promise<ActionResu
   if (file.size > 8 * 1024 * 1024) {
     return { ok: false, error: "Inventory must be 8 MB or smaller." }
   }
+  const inventoryAsOf = inventoryDateFromFileName(file.name)
+  if (!inventoryAsOf) {
+    return {
+      ok: false,
+      error: "Include the inventory date in the file name, such as Inventory 10.6.26.csv.",
+    }
+  }
   const text = await file.text()
   const parsed = parseInventoryCsv(text)
   if ("error" in parsed) return { ok: false, error: parsed.error }
   const uploaded = booksFromUpload(parsed.rows)
   uploaded.inventoryImportedAt = new Date().toISOString()
-  const next = booksWithInventoryReset(readBooks(), uploaded)
+  const next = booksWithInventoryReset(readBooks(), uploaded, inventoryAsOf)
   const failed = persist(next)
   if (failed) return failed
+  const deductedBottles = (next.orderHistory ?? [])
+    .filter((line) => line.inventoryDeducted)
+    .reduce((sum, line) => sum + line.bottles, 0)
+  const asOf = formatInventoryDay(inventoryAsOf)
+  const deducted =
+    deductedBottles > 0
+      ? ` ${deductedBottles === 1 ? "1 bottle was" : `${deductedBottles} bottles were`} removed for orders after ${asOf}.`
+      : " Order history was left in place."
   return {
     ok: true,
-    message: `Imported ${parsed.rows.length} SKUs. Order history was left in place.`,
+    message: `Imported ${parsed.rows.length} SKUs as of ${asOf}.${deducted}`,
   }
 }
 
@@ -153,10 +170,12 @@ export async function importOrderHistoryCsv(formData: FormData): Promise<ActionR
 }
 
 function orderHistoryImportMessage(result: {
+  books: { inventoryAsOf?: string | null }
   imported: number
   skipped: number
   unmatched: number
   unmatchedSamples: string[]
+  deductedBottles: number
 }) {
   let message =
     result.imported === 0
@@ -164,6 +183,11 @@ function orderHistoryImportMessage(result: {
       : `Added ${result.imported} order line${result.imported === 1 ? "" : "s"} for sales pace.`
   if (result.skipped > 0) {
     message += ` ${result.skipped} already in the upload ${result.skipped === 1 ? "was" : "were"} ignored.`
+  }
+  if (result.deductedBottles > 0) {
+    const bottles =
+      result.deductedBottles === 1 ? "1 bottle was" : `${result.deductedBottles} bottles were`
+    message += ` ${bottles} removed from inventory for orders after ${formatInventoryDay(inventoryAsOfDay(result.books))}.`
   }
   if (result.unmatched > 0) {
     const sample = result.unmatchedSamples.join(", ")
@@ -189,7 +213,7 @@ export async function clearOrderHistory(): Promise<ActionResult> {
   if (failed) return failed
   return {
     ok: true,
-    message: "Order history upload cleared. Inventory and posted shipments were left in place.",
+    message: "Order history upload cleared. Bottles removed for orders after the inventory date were put back. Posted shipments stay.",
   }
 }
 

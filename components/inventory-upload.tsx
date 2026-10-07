@@ -85,7 +85,7 @@ export function InventoryUpload({ layout = "sidebar" }: { layout?: "inline" | "s
             {pending ? "Uploading…" : fileName ? fileName : "Drop CSV or browse"}
           </p>
           <p className={cn("mt-0.5", sidebar ? "text-[10px] text-sidebar-foreground/55" : "text-xs text-muted-foreground")}>
-            {fileName ? "Ready to upload" : "Product name · SKU · on hand · available"}
+            {fileName ? "Ready to upload" : "Product name · SKU · on hand · available · date in the file name"}
           </p>
         </div>
         <input

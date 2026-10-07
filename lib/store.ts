@@ -2,6 +2,7 @@ import fs from "fs"
 import path from "path"
 import { connection } from "next/server"
 import { producerFromProductName } from "@/lib/csv-import"
+import { applyInventoryOrderDeductions, restoreDeductedOrderInventory } from "@/lib/order-history-import"
 import { seedBooks } from "@/lib/seed"
 import type { Books, Wine } from "@/lib/types"
 
@@ -60,6 +61,15 @@ export function migrateBooks(books: Books): Books {
     next = { ...next, inventoryImportedAt: null }
     changed = true
   }
+  if (next.inventoryAsOf === undefined) {
+    next = { ...next, inventoryAsOf: null }
+    changed = true
+  }
+  const deducted = applyInventoryOrderDeductions(next)
+  if (deducted.deductedLines > 0) {
+    next = deducted.books
+    changed = true
+  }
   if (next.salesPaceWindowDays === undefined || next.salesPaceWindowDays === 28) {
     next = { ...next, salesPaceWindowDays: 30 }
     changed = true
@@ -112,19 +122,22 @@ export async function loadBooks() {
 }
 
 /** Re-import the inventory CSV while keeping the order-history upload and pace window. */
-export function booksWithInventoryReset(current: Books, uploaded: Books): Books {
-  return {
+export function booksWithInventoryReset(current: Books, uploaded: Books, inventoryAsOf?: string | null): Books {
+  const merged: Books = {
     ...uploaded,
-    orderHistory: current.orderHistory ?? [],
+    orderHistory: (current.orderHistory ?? []).map((line) => ({ ...line, inventoryDeducted: false })),
     orderHistoryImportedAt: current.orderHistoryImportedAt ?? null,
     salesPaceWindowDays: current.salesPaceWindowDays ?? uploaded.salesPaceWindowDays,
+    inventoryAsOf: inventoryAsOf === undefined ? (uploaded.inventoryAsOf ?? null) : inventoryAsOf,
   }
+  return applyInventoryOrderDeductions(merged).books
 }
 
-/** Drop the order-history upload. Inventory, postings, and the pace window stay. */
+/** Drop the order-history upload and put back bottles those orders removed. Posted shipments stay. */
 export function booksWithoutOrderHistory(current: Books): Books {
+  const restored = restoreDeductedOrderInventory(current)
   return {
-    ...current,
+    ...restored,
     orderHistory: [],
     orderHistoryImportedAt: null,
   }

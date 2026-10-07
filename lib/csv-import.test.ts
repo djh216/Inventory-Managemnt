@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import fs from "node:fs"
 import test from "node:test"
-import { booksFromUpload, importBooksFromCsv, inventoryCsvPath, parseInventoryCsv, readInventoryCsv } from "./csv-import"
+import { booksFromUpload, importBooksFromCsv, inventoryCsvPath, inventoryDateFromFileName, parseInventoryCsv, readInventoryCsv } from "./csv-import"
 import { winePosition } from "./inventory"
 import { booksWithInventoryReset } from "./store"
 
@@ -87,6 +87,13 @@ test("an inventory upload replaces stock and keeps order history", () => {
   assert.equal(next.orderHistoryImportedAt, "2026-04-07T00:00:00.000Z")
   assert.equal(next.salesPaceWindowDays, 90)
   assert.equal(next.inventoryImportedAt, "2026-10-07T00:00:00.000Z")
+})
+
+test("reads the snapshot date from the inventory file name", () => {
+  assert.equal(inventoryDateFromFileName("Cursor Initial Inventory Upload 10.6.26.csv"), "2026-10-06")
+  assert.equal(inventoryDateFromFileName("Inventory 10.15.26.csv"), "2026-10-15")
+  assert.equal(inventoryDateFromFileName("Inventory 2026-11-02.csv"), "2026-11-02")
+  assert.equal(inventoryDateFromFileName("inventory-upload.csv"), null)
 })
 
 test("reads the producer from the product name column", () => {

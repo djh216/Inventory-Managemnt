@@ -25,14 +25,14 @@ export function AppNav({
   orderHistoryImportedAt = null,
   salesPaceWindowDays = 30,
   skuCount = 0,
-  inventoryImportedAt = null,
+  inventoryAsOf = "2026-10-06",
 }: {
   alertCount?: number
   orderLineCount?: number
   orderHistoryImportedAt?: string | null
   salesPaceWindowDays?: number
   skuCount?: number
-  inventoryImportedAt?: string | null
+  inventoryAsOf?: string
 }) {
   const pathname = usePathname()
   return (
@@ -42,7 +42,7 @@ export function AppNav({
       alertCount={alertCount}
       orderHistoryPanel={() => (
         <div className="space-y-4">
-          <SidebarInventoryUpload skuCount={skuCount} inventoryImportedAt={inventoryImportedAt} />
+          <SidebarInventoryUpload skuCount={skuCount} inventoryAsOf={inventoryAsOf} />
           <div className="border-t border-sidebar-border pt-4">
             <SidebarOrderHistory
               orderLineCount={orderLineCount}
