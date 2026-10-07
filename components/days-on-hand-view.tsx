@@ -101,9 +101,12 @@ export function DaysOnHandView({ books }: { books: Books }) {
           <div>
             <h2 className="font-heading text-xl tracking-tight">Order history upload</h2>
             <p className="mt-1 max-w-xl text-xs leading-5 text-muted-foreground">
-              CSV columns: <span className="font-mono">SKU</span> (or Label),{" "}
-              <span className="font-mono">Order Date</span>, <span className="font-mono">Bottles</span>, optional
-              Account and Reference. Re-upload replaces the previous file; inventory counts stay as uploaded.
+              Use an Outfield Deals export (
+              <span className="font-mono">Lead Team Member</span>,{" "}
+              <span className="font-mono">Account Name</span>, <span className="font-mono">Order Date</span>,{" "}
+              <span className="font-mono">Line Item Product Variation Name</span>,{" "}
+              <span className="font-mono">Line Item Quantity</span>) or a simple CSV with SKU/Label, date, and
+              bottles. Re-upload replaces the previous file; inventory counts stay as uploaded.
             </p>
             {books.orderHistoryImportedAt ? (
               <p className="mt-2 text-xs text-muted-foreground">

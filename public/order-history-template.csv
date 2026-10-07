@@ -1,4 +1,4 @@
-SKU,Order Date,Bottles,Account,Reference
-100061550,2026-09-01,48,Sample Account A,SO-1001
-100055676,2026-09-14,12,Sample Account B,SO-1002
-100055675,2026-09-20,24,Sample Account A,SO-1003
+Lead Team Member,Account Name,Order Date,Line Item Product Variation Name,Line Item Quantity
+Angela Riccetti,Pizzeria Luca,"April 06, 2025",Ottoventi Punto 8 Grillo Sicilia Piemonte 2024,12.0
+Angela Riccetti,Luca on James,"April 07, 2025",Avignonesi Cantaloro Red Blend Toscana IGT 2024,24.0
+Emily Carlton,Bar Marco,"April 07, 2025",Ciacci Piccolomini Toscana Rosso IGT 2023,36.0

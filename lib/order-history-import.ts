@@ -39,7 +39,17 @@ export function parseOrderHistoryCsv(raw: string): ParsedRow[] | { error: string
     "item code",
     "code",
   ])
-  const labelIndex = findColumn(header, ["label", "product", "wine", "description", "item name", "item"])
+  const labelIndex = findColumn(header, [
+    "label",
+    "product",
+    "wine",
+    "description",
+    "item name",
+    "item",
+    "line item product variation name",
+    "product variation name",
+    "product name",
+  ])
   const dateIndex = findColumn(header, [
     "order date",
     "ship date",
@@ -56,8 +66,10 @@ export function parseOrderHistoryCsv(raw: string): ParsedRow[] | { error: string
     "bottle qty",
     "qty bottles",
     "shipped",
+    "line item quantity",
   ])
-  const accountIndex = findColumn(header, ["account", "customer", "buyer"])
+  const accountIndex = findColumn(header, ["account", "customer", "buyer", "account name"])
+  const repIndex = findColumn(header, ["lead team member", "rep", "sales rep"])
   const referenceIndex = findColumn(header, ["reference", "order", "order number", "invoice", "po"])
 
   if (dateIndex === -1 || bottlesIndex === -1) {
@@ -75,18 +87,22 @@ export function parseOrderHistoryCsv(raw: string): ParsedRow[] | { error: string
     const dateRaw = parts[dateIndex]?.trim() ?? ""
     const bottlesRaw = parts[bottlesIndex]?.trim() ?? ""
     if (!dateRaw && !bottlesRaw && !sku && !label) continue
+    if (!sku && !label) continue
 
     const bottles = parseBottles(bottlesRaw)
+    if (bottles === null || bottles <= 0) continue
+
     const at = parseOrderDate(dateRaw)
-    if (bottles === null || bottles <= 0) {
-      return { error: `Line ${index + 1}: enter a positive bottle quantity.` }
-    }
     if (!at) {
-      return { error: `Line ${index + 1}: could not read the date "${dateRaw}". Use YYYY-MM-DD or MM/DD/YYYY.` }
+      return {
+        error: `Line ${index + 1}: could not read the date "${dateRaw}". Use YYYY-MM-DD, MM/DD/YYYY, or Month DD, YYYY.`,
+      }
     }
-    if (!sku && !label) {
-      return { error: `Line ${index + 1}: add a SKU or Label.` }
-    }
+
+    const account = accountIndex >= 0 ? parts[accountIndex]?.trim() ?? "" : ""
+    const reference =
+      (referenceIndex >= 0 ? parts[referenceIndex]?.trim() ?? "" : "") ||
+      outfieldReference(repIndex >= 0 ? parts[repIndex]?.trim() ?? "" : "", account, dateRaw)
 
     rows.push({
       line: index + 1,
@@ -94,8 +110,8 @@ export function parseOrderHistoryCsv(raw: string): ParsedRow[] | { error: string
       label,
       at,
       bottles,
-      account: accountIndex >= 0 ? parts[accountIndex]?.trim() ?? "" : "",
-      reference: referenceIndex >= 0 ? parts[referenceIndex]?.trim() ?? "" : "",
+      account,
+      reference,
     })
   }
 
@@ -115,7 +131,7 @@ export function applyOrderHistoryImport(
   const wineByLabel = new Map<string, Wine>()
   for (const wine of books.wines) {
     wineBySku.set(wine.sku.trim().toLowerCase(), wine)
-    wineByLabel.set(wine.label.trim().toLowerCase(), wine)
+    wineByLabel.set(catalogLabelKey(wine.label), wine)
   }
 
   const orderHistory: OrderHistoryLine[] = []
@@ -125,7 +141,7 @@ export function applyOrderHistoryImport(
   for (const row of rows) {
     const wine =
       (row.sku ? wineBySku.get(row.sku.toLowerCase()) : undefined) ??
-      (row.label ? wineByLabel.get(row.label.toLowerCase()) : undefined)
+      (row.label ? wineByLabel.get(catalogLabelKey(row.label)) : undefined)
     if (!wine) {
       unmatched += 1
       if (unmatchedSamples.length < 5) {
@@ -146,7 +162,8 @@ export function applyOrderHistoryImport(
   if (orderHistory.length === 0) {
     return {
       ok: false,
-      error: "No rows matched a catalog SKU or label. Check that SKUs match the Oct 6 upload.",
+      error:
+        "No rows matched the catalog. Outfield exports should use Line Item Product Variation Name exactly as in the Oct 6 inventory upload.",
     }
   }
 
@@ -206,8 +223,27 @@ function parseCsvLine(line: string): string[] {
 
 function parseBottles(value: string) {
   const cleaned = value.replace(/,/g, "").trim()
-  if (!/^\d+$/.test(cleaned)) return null
-  return Number(cleaned)
+  if (!/^\d+(\.\d+)?$/.test(cleaned)) return null
+  const bottles = Math.round(Number(cleaned))
+  return Number.isFinite(bottles) ? bottles : null
+}
+
+function catalogLabelKey(label: string) {
+  return normalizeProductLabel(label).toLowerCase()
+}
+
+export function normalizeProductLabel(label: string) {
+  return label
+    .trim()
+    .replace(/\u2019/g, "'")
+    .replace(/\u2018/g, "'")
+    .replace(/\s+/g, " ")
+}
+
+function outfieldReference(rep: string, account: string, orderDate: string) {
+  const parts = [rep, account, orderDate].map((part) => part.trim()).filter(Boolean)
+  if (parts.length === 0) return ""
+  return parts.join(" · ")
 }
 
 export function parseOrderDate(value: string): string | null {
@@ -226,6 +262,12 @@ export function parseOrderDate(value: string): string | null {
     const year = Number(slash[3])
     const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0))
     return Number.isNaN(date.getTime()) ? null : date.toISOString()
+  }
+
+  const longMonth = /^([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})$/.exec(trimmed)
+  if (longMonth) {
+    const parsed = new Date(`${longMonth[1]} ${longMonth[2]}, ${longMonth[3]} 12:00:00 GMT`)
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
   }
 
   const parsed = new Date(trimmed)

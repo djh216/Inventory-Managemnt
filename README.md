@@ -12,7 +12,9 @@ Live inventory for a wine distribution operation, built on **Cursor Initial Inve
 
 ### Order history CSV
 
-Use the template at `public/order-history-template.csv` (also linked from the dashboard). Required columns: **SKU** (or Label), **Order Date**, **Bottles**. Optional: Account, Reference. Dates: `YYYY-MM-DD` or `MM/DD/YYYY`.
+Primary format: **Outfield Deals export** (`Outfield_Deals_Export-*.csv`) with columns **Lead Team Member**, **Account Name**, **Order Date**, **Line Item Product Variation Name**, **Line Item Quantity**. Product names must match the Oct 6 inventory **Label** column. Blank product rows (order headers) are skipped automatically.
+
+A sample header is in `public/order-history-template.csv`. Simple CSVs with **SKU** (or Label), **Order Date**, and **Bottles** also work.
 
 ## Run it
 

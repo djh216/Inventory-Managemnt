@@ -60,6 +60,17 @@ test("parses order history CSV and matches by SKU", () => {
   assert.equal(result.books.stock[0].availableBottles, 280)
 })
 
+test("parses Outfield Deals export rows", () => {
+  const csv = `Lead Team Member,Account Name,Order Date,Line Item Product Variation Name,Line Item Quantity
+Angela Riccetti,Pizzeria Luca,"April 06, 2025","",""
+Angela Riccetti,Luca on James,"April 07, 2025",Avignonesi Cantaloro Red Blend Toscana IGT 2024,24.0`
+  const parsed = parseOrderHistoryCsv(csv)
+  assert.ok(Array.isArray(parsed))
+  assert.equal(parsed.length, 1)
+  assert.equal(parsed[0].bottles, 24)
+  assert.equal(parsed[0].account, "Luca on James")
+})
+
 test("uploaded orders drive days on hand without changing inventory", () => {
   const csv = `SKU,Order Date,Bottles
 100061550,2026-09-25,280`
