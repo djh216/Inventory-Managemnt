@@ -144,10 +144,18 @@ export function DaysOnHandView({ books }: { books: Books }) {
         />
         <Select value={winery} onValueChange={(value) => setWinery(value ?? "all")}>
           <SelectTrigger className="w-[min(100%,14rem)]">
-            <SelectValue placeholder="Winery" />
+            <span
+              data-slot="select-value"
+              className={cn(
+                "line-clamp-1 flex flex-1 items-center gap-1.5 text-left",
+                winery === "all" && "text-muted-foreground",
+              )}
+            >
+              {winery === "all" ? "Producer" : winery}
+            </span>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All wineries</SelectItem>
+            <SelectItem value="all">All producers</SelectItem>
             {wineries.map((name) => (
               <SelectItem key={name} value={name}>
                 {name}
