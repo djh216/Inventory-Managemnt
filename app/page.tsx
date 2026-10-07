@@ -4,7 +4,7 @@ import { PageSkeleton } from "@/components/page-skeleton"
 import { loadBooks } from "@/lib/store"
 
 export const metadata = {
-  title: "Desk",
+  title: "Live inventory",
 }
 
 export default function Page() {

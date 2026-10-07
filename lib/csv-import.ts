@@ -118,7 +118,10 @@ export function booksFromUpload(rows: CsvRow[]): Books {
       costPerCase: 0,
       pricePerCase: 0,
       reorderCases: 0,
-      supplier: "",
+      partner: parsed.producer,
+      leadTimeDays: defaultLeadTime(parsed.country),
+      targetDaysOfStock: 45,
+      supplier: parsed.producer,
       active: true,
       note: row.onHand !== row.available ? "Imported with committed quantity." : "",
     }
@@ -329,6 +332,12 @@ function detectRegion(label: string, appellation: string) {
   }
   if (/docg|doc|igt|dop/.test(text)) return "Italy"
   return appellation ? "Italy" : ""
+}
+
+function defaultLeadTime(country: string) {
+  if (country === "Italy" || country === "France" || country === "Spain") return 21
+  if (country === "United States") return 14
+  return 21
 }
 
 function detectCountry(label: string, region: string, appellation: string) {

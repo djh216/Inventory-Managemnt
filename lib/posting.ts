@@ -138,6 +138,11 @@ export function applyPosting(
   }
 
   if (input.type === "ship") {
+    if (bottles > source.onHandBottles) {
+      return fail(
+        `${from.name} has ${formatBottles(source.onHandBottles, wine.bottlesPerCase)} on the floor.`,
+      )
+    }
     if (bottles > free) {
       return fail(shipBlock(from.name, free, source.allocatedBottles, wine.bottlesPerCase))
     }
@@ -188,6 +193,11 @@ export function applyPosting(
     if (!destination) return fail("Choose the house that will receive the wine.")
     if (destination.id === from.id) {
       return fail("Pick a different house to transfer into.")
+    }
+    if (bottles > source.onHandBottles) {
+      return fail(
+        `${from.name} has ${formatBottles(source.onHandBottles, wine.bottlesPerCase)} on the floor.`,
+      )
     }
     if (bottles > free) {
       return fail(
@@ -339,6 +349,9 @@ export function applyCreateWine(
     costPerCase: input.costPerCase,
     pricePerCase: input.pricePerCase,
     reorderCases: input.reorderCases,
+    partner: supplier || producer,
+    leadTimeDays: 21,
+    targetDaysOfStock: 45,
     supplier,
     active: true,
     note: "",

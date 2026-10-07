@@ -5,7 +5,8 @@ import { buttonVariants } from "@/components/ui/button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MovementDialog } from "@/components/movement-dialog"
-import { ColorMark, StatusPill } from "@/components/marks"
+import { ColorMark } from "@/components/marks"
+import { SupplyPill } from "@/components/supply-pill"
 import { EmptyWine, WineDetail } from "@/components/wine-detail"
 import { WineFormDialog } from "@/components/wine-form-dialog"
 import {
@@ -17,12 +18,13 @@ import {
 } from "@/components/ui/select"
 import { formatCount, wineName } from "@/lib/format"
 import { COLOR_LABEL } from "@/lib/format"
-import { costOf, statusFor, winePosition } from "@/lib/inventory"
+import { winePosition } from "@/lib/inventory"
+import { formatDaysRemaining, supplyLine } from "@/lib/supply"
 import type { Books, PostingPreset, WineColor } from "@/lib/types"
 import { WINE_COLORS } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
-type SortKey = "producer" | "free" | "value" | "risk" | "held"
+type SortKey = "producer" | "free" | "risk" | "held" | "supply"
 
 export function CatalogView({
   books,
@@ -37,7 +39,13 @@ export function CatalogView({
   const [color, setColor] = useState<WineColor | "all">("all")
   const [country, setCountry] = useState("all")
   const initialSortKey: SortKey =
-    initialSort === "risk" ? "risk" : initialSort === "held" ? "held" : "producer"
+    initialSort === "risk"
+      ? "risk"
+      : initialSort === "held"
+        ? "held"
+        : initialSort === "supply"
+          ? "supply"
+          : "producer"
   const [sort, setSort] = useState<SortKey>(initialSortKey)
   const [trackedSort, setTrackedSort] = useState(initialSort)
   const [selectedId, setSelectedId] = useState<string | null>(initialWineId ?? null)
@@ -52,9 +60,14 @@ export function CatalogView({
     setTrackedWine(initialWineId)
     setSelectedId(initialWineId)
   }
-  if ((initialSort === "risk" || initialSort === "held") && initialSort !== trackedSort) {
+  if (
+    (initialSort === "risk" || initialSort === "held" || initialSort === "supply") &&
+    initialSort !== trackedSort
+  ) {
     setTrackedSort(initialSort)
-    setSort(initialSort === "held" ? "held" : "risk")
+    setSort(
+      initialSort === "held" ? "held" : initialSort === "supply" ? "supply" : "risk",
+    )
   }
 
   useEffect(() => {
@@ -112,7 +125,7 @@ export function CatalogView({
           <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Catalog</p>
           <h1 className="mt-1 font-heading text-4xl tracking-tight">The book</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Labels, SKUs, and bottle counts from the Oct 6 upload. Available is what you can still sell; committed is on hand minus available.
+            Live bottle counts with days-of-supply from posted shipments. Reorder alerts use each wine&apos;s winery lead time.
           </p>
         </div>
         <Button
@@ -168,6 +181,7 @@ export function CatalogView({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="producer">Producer</SelectItem>
+            <SelectItem value="supply">Reorder urgency</SelectItem>
             <SelectItem value="free">Most available</SelectItem>
             <SelectItem value="held">Most committed</SelectItem>
             <SelectItem value="risk">Unavailable first</SelectItem>
@@ -218,12 +232,14 @@ export function CatalogView({
                   <th className="px-2 py-3 font-medium">On hand</th>
                   <th className="px-2 py-3 font-medium">Available</th>
                   <th className="px-2 py-3 font-medium">Committed</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-2 py-3 font-medium">Days left</th>
+                  <th className="px-4 py-3 font-medium">Alert</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((wine) => {
                   const position = winePosition(books, wine.id)
+                  const supply = supplyLine(books, wine)
                   const active = selected?.id === wine.id
                   return (
                     <tr
@@ -256,8 +272,9 @@ export function CatalogView({
                       <td className="px-2 py-3 tabular-nums">{formatCount(position.onHand)}</td>
                       <td className="px-2 py-3 tabular-nums">{formatCount(position.free)}</td>
                       <td className="px-2 py-3 tabular-nums">{formatCount(position.allocated)}</td>
+                      <td className="px-2 py-3 tabular-nums">{formatDaysRemaining(supply.daysRemaining)}</td>
                       <td className="px-4 py-3">
-                        <StatusPill status={statusFor(wine, position.free)} />
+                        <SupplyPill urgency={supply.urgency} />
                       </td>
                     </tr>
                   )
@@ -325,9 +342,23 @@ function FilterChip({
 function compareWines(books: Books, a: Books["wines"][number], b: Books["wines"][number], sort: SortKey) {
   const left = winePosition(books, a.id)
   const right = winePosition(books, b.id)
-  if (sort === "free") return right.free - left.free || a.producer.localeCompare(b.producer)
-  if (sort === "value") {
-    return costOf(b, right.onHand) - costOf(a, left.onHand) || a.producer.localeCompare(b.producer)
+  if (sort === "free") return right.free - left.free || (a.label || a.producer).localeCompare(b.label || b.producer)
+  if (sort === "supply") {
+    const rank = (line: ReturnType<typeof supplyLine>) => {
+      if (line.urgency === "critical") return 0
+      if (line.urgency === "warning") return 1
+      if (line.urgency === "watch") return 2
+      if (line.urgency === "unknown") return 3
+      return 4
+    }
+    const leftLine = supplyLine(books, a)
+    const rightLine = supplyLine(books, b)
+    return (
+      rank(leftLine) - rank(rightLine) ||
+      (leftLine.daysRemaining ?? Number.POSITIVE_INFINITY) -
+        (rightLine.daysRemaining ?? Number.POSITIVE_INFINITY) ||
+      (a.label || a.producer).localeCompare(b.label || b.producer)
+    )
   }
   if (sort === "held") {
     return right.allocated - left.allocated || (a.label || a.producer).localeCompare(b.label || b.producer)

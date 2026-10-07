@@ -16,9 +16,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-export function AppNav() {
+export function AppNav({ alertCount = 0 }: { alertCount?: number }) {
   const pathname = usePathname()
-  return <NavFrame pathname={pathname} footer={<RestoreBooks />} />
+  return <NavFrame pathname={pathname} footer={<RestoreBooks />} alertCount={alertCount} />
 }
 
 function RestoreBooks() {

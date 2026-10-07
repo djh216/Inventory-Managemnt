@@ -3,11 +3,12 @@ import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 const links = [
-  { href: "/", label: "Desk" },
+  { href: "/", label: "Live inventory", badge: true },
+  { href: "/orders", label: "Orders" },
   { href: "/catalog", label: "Catalog" },
   { href: "/stock", label: "Stock" },
   { href: "/ledger", label: "Ledger" },
-]
+] as const
 
 function isCurrent(pathname: string | null, href: string) {
   if (!pathname) return false
@@ -15,11 +16,20 @@ function isCurrent(pathname: string | null, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-function NavLinks({ pathname, stacked }: { pathname: string | null; stacked?: boolean }) {
+function NavLinks({
+  pathname,
+  stacked,
+  alertCount = 0,
+}: {
+  pathname: string | null
+  stacked?: boolean
+  alertCount?: number
+}) {
   return (
     <nav className={cn("flex gap-1", stacked ? "flex-col" : "overflow-x-auto")} aria-label="Sections">
       {links.map((link) => {
         const current = isCurrent(pathname, link.href)
+        const showBadge = "badge" in link && link.badge && alertCount > 0
         return (
           <Link
             key={link.href}
@@ -29,9 +39,15 @@ function NavLinks({ pathname, stacked }: { pathname: string | null; stacked?: bo
               "rounded-md px-2.5 py-2 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground",
               stacked && "px-3",
               current && "bg-sidebar-accent text-sidebar-foreground",
+              showBadge && "flex items-center justify-between gap-2",
             )}
           >
-            {link.label}
+            <span>{link.label}</span>
+            {showBadge ? (
+              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+                {alertCount}
+              </span>
+            ) : null}
           </Link>
         )
       })}
@@ -42,9 +58,11 @@ function NavLinks({ pathname, stacked }: { pathname: string | null; stacked?: bo
 export function NavFrame({
   pathname,
   footer,
+  alertCount = 0,
 }: {
   pathname: string | null
   footer?: ReactNode
+  alertCount?: number
 }) {
   return (
     <>
@@ -56,15 +74,15 @@ export function NavFrame({
             Oct 6 upload
           </p>
           <p className="mt-4 text-xs leading-5 text-sidebar-foreground/55">
-            Wine distribution book from Cursor Initial Inventory Upload 10.6.26.csv
+            Shipments drive depletion; reorder alerts fire when days of cover hit partner lead time.
           </p>
         </div>
         <div className="px-3">
-          <NavLinks pathname={pathname} stacked />
+          <NavLinks pathname={pathname} stacked alertCount={alertCount} />
         </div>
         <div className="mt-auto space-y-3 border-t border-sidebar-border p-4">
           <p className="text-[11px] leading-5 text-sidebar-foreground/55">
-            Postings update `data/books.json` on this machine. Restore upload resets to the CSV baseline.
+            Post shipments as orders, receive against winery POs, and tune lead time per wine in the catalog.
           </p>
           {footer}
         </div>
@@ -81,7 +99,7 @@ export function NavFrame({
           {footer}
         </div>
         <div className="px-2 pb-2">
-          <NavLinks pathname={pathname} />
+          <NavLinks pathname={pathname} alertCount={alertCount} />
         </div>
       </div>
     </>

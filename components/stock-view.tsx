@@ -4,11 +4,11 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MovementDialog } from "@/components/movement-dialog"
-import { StatusPill } from "@/components/marks"
+import { SupplyPill } from "@/components/supply-pill"
+import { supplyLine } from "@/lib/supply"
 import { WineDetail } from "@/components/wine-detail"
 import { formatCount } from "@/lib/format"
-import { lineFree } from "@/lib/inventory"
-import { fullestFreeLocation, lineAt, statusFor, winePosition } from "@/lib/inventory"
+import { fullestFreeLocation, lineAt, lineFree, winePosition } from "@/lib/inventory"
 import type { Books, PostingPreset } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -165,7 +165,7 @@ export function StockView({ books, initialHouse }: { books: Books; initialHouse?
                       <td className="px-2 py-3 tabular-nums">{formatCount(position.free)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-between gap-2">
-                          <StatusPill status={statusFor(wine, position.free)} />
+                          <SupplyPill urgency={supplyLine(books, wine).urgency} />
                           <Button
                             size="sm"
                             variant="outline"

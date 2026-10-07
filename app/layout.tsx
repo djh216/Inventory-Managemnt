@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Fraunces, Geist, Geist_Mono } from "next/font/google"
 import { Suspense } from "react"
-import { AppNav } from "@/components/app-nav"
+import { AppNavLoader } from "@/components/app-nav-loader"
 import { NavFrame } from "@/components/nav-frame"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s · Wine inventory",
   },
   description:
-    "Inventory desk built from the Oct 6, 2026 upload. Track on-hand bottles, available quantity, commitments, and postings.",
+    "Live wine inventory with order-driven depletion, days-of-supply, and reorder alerts for winery partners.",
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -39,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full bg-background text-foreground">
         <div className="min-h-full md:pl-60">
           <Suspense fallback={<NavFrame pathname={null} />}>
-            <AppNav />
+            <AppNavLoader />
           </Suspense>
           <main className="mx-auto w-full max-w-6xl px-4 py-5 md:px-8 md:py-8">{children}</main>
         </div>

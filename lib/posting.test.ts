@@ -23,6 +23,9 @@ function wine(overrides: Partial<Wine> = {}): Wine {
     costPerCase: 100,
     pricePerCase: 160,
     reorderCases: 4,
+    partner: "Test House",
+    leadTimeDays: 21,
+    targetDaysOfStock: 45,
     supplier: "Test House",
     active: true,
     note: "",
@@ -248,4 +251,25 @@ test("a new wine gets a unique sku and an opening receipt", () => {
   assert.equal(added?.sku, "TES-ROU-22-2")
   assert.equal(created.books.stock.find((line) => line.wineId === "w-2")?.onHandBottles, 36)
   assert.equal(start.wines.length, 1)
+})
+
+test("a shipment cannot leave the floor negative when available exceeds on hand", () => {
+  const start = books()
+  start.stock[0] = {
+    wineId: "w-1",
+    locationId: "oak",
+    onHandBottles: 0,
+    allocatedBottles: 0,
+    availableBottles: 5,
+  }
+  const result = applyPosting(
+    start,
+    posting({ cases: 0, looseBottles: 1 }),
+    "2026-10-07T00:00:00.000Z",
+    "m-1",
+  )
+  assert.equal(result.ok, false)
+  if (result.ok) return
+  assert.match(result.error, /floor/)
+  assert.equal(start.stock[0].onHandBottles, 0)
 })

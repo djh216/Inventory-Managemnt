@@ -33,6 +33,12 @@ export type Wine = {
   costPerCase: number
   pricePerCase: number
   reorderCases: number
+  /** Winery partner to reorder from (defaults to producer on import). */
+  partner: string
+  /** Days from purchase order to warehouse receipt. */
+  leadTimeDays: number
+  /** Target days of available stock to hold after a reorder lands. */
+  targetDaysOfStock: number
   supplier: string
   active: boolean
   note: string

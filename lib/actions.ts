@@ -43,6 +43,32 @@ export async function createWine(input: CreateWineInput): Promise<ActionResult> 
   return { ok: true, message: result.message, wineId: result.wineId }
 }
 
+export async function setSupplyPolicy(input: {
+  wineId: string
+  partner: string
+  leadTimeDays: number
+  targetDaysOfStock: number
+}): Promise<ActionResult> {
+  const books = readBooks()
+  const wine = books.wines.find((item) => item.id === input.wineId)
+  if (!wine) return { ok: false, error: "That wine is not on the book." }
+  if (input.partner.trim().length < 2) return { ok: false, error: "Enter the winery partner name." }
+  if (!Number.isInteger(input.leadTimeDays) || input.leadTimeDays < 1 || input.leadTimeDays > 180) {
+    return { ok: false, error: "Lead time must be between 1 and 180 days." }
+  }
+  if (!Number.isInteger(input.targetDaysOfStock) || input.targetDaysOfStock < 7 || input.targetDaysOfStock > 365) {
+    return { ok: false, error: "Target cover must be between 7 and 365 days." }
+  }
+  const next = structuredClone(books)
+  const row = next.wines.find((item) => item.id === input.wineId)!
+  row.partner = input.partner.trim()
+  row.leadTimeDays = input.leadTimeDays
+  row.targetDaysOfStock = input.targetDaysOfStock
+  const failed = persist(next)
+  if (failed) return failed
+  return { ok: true, message: `Updated reorder policy for ${row.label || row.producer}.`, wineId: input.wineId }
+}
+
 export async function setReorder(wineId: string, reorderCases: number): Promise<ActionResult> {
   const result = applyReorder(readBooks(), wineId, reorderCases)
   if (!result.ok) return result

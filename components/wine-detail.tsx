@@ -4,18 +4,23 @@ import { useId, useState, useTransition, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { setReorder } from "@/lib/actions"
+import { setSupplyPolicy } from "@/lib/actions"
 import {
   formatAbv,
   formatBottleSize,
-  formatBottles,
   formatCount,
   formatWhen,
   MOVEMENT_LABEL,
 } from "@/lib/format"
-import { fullestFreeLocation, lineAt, lineFree, statusFor, winePosition } from "@/lib/inventory"
+import { fullestFreeLocation, lineAt, lineFree, winePosition } from "@/lib/inventory"
+import {
+  formatDaysRemaining,
+  supplyLine,
+  VELOCITY_WINDOW_DAYS,
+} from "@/lib/supply"
 import type { Books, PostingPreset, Wine } from "@/lib/types"
-import { ColorMark, StatusPill } from "@/components/marks"
+import { ColorMark } from "@/components/marks"
+import { SupplyPill } from "@/components/supply-pill"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,7 +35,7 @@ export function WineDetail({
   onAction: (preset: PostingPreset) => void
 }) {
   const position = winePosition(books, wine.id)
-  const status = statusFor(wine, position.free)
+  const supply = supplyLine(books, wine)
   const preferredHouse = fullestFreeLocation(books, wine.id)
   const recent = books.movements
     .filter((movement) => movement.wineId === wine.id)
@@ -42,7 +47,7 @@ export function WineDetail({
       <div>
         <div className="flex items-start justify-between gap-3">
           <p className="font-mono text-[11px] tracking-wide text-muted-foreground">{wine.sku}</p>
-          <StatusPill status={status} />
+          <SupplyPill urgency={supply.urgency} />
         </div>
         <h2 className="mt-1 font-heading text-xl leading-snug tracking-tight">{wine.label || `${wine.producer} ${wine.cuvee}`}</h2>
         <p className="mt-2 text-sm">
@@ -64,9 +69,13 @@ export function WineDetail({
         <Stat label="Available" value={formatCount(position.free)} />
         <Stat label="Committed" value={formatCount(position.allocated)} />
       </dl>
-      {wine.supplier ? (
-        <p className="text-xs text-muted-foreground">Supplier {wine.supplier}</p>
-      ) : null}
+      <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+        <Stat label="Daily orders" value={supply.dailyRate ? supply.dailyRate.toFixed(1) : "—"} />
+        <Stat label="Days left" value={formatDaysRemaining(supply.daysRemaining)} />
+        <Stat label={`Shipped (${VELOCITY_WINDOW_DAYS}d)`} value={formatCount(supply.shippedWindow)} />
+        <Stat label="Suggested PO" value={formatCount(supply.suggestedReorderBottles)} />
+      </dl>
+      <p className="text-xs text-muted-foreground">Winery partner: {wine.partner}</p>
       {wine.note ? <p className="text-sm leading-6">{wine.note}</p> : null}
 
       <div>
@@ -99,7 +108,7 @@ export function WineDetail({
         </table>
       </div>
 
-      <ReorderForm key={wine.id} wine={wine} />
+      <SupplyPolicyForm key={wine.id} wine={wine} />
 
       <div className="grid grid-cols-2 gap-2">
         <Button onClick={() => onAction({ type: "receive", wineId: wine.id, locationId: preferredHouse })}>
@@ -155,7 +164,7 @@ export function WineDetail({
                   <span className="font-medium">{MOVEMENT_LABEL[movement.type]}</span>
                   <span className="text-muted-foreground">
                     {" "}
-                    · {formatBottles(Math.abs(movement.bottles), wine.bottlesPerCase)} · {house?.name} ·{" "}
+                    · {formatCount(Math.abs(movement.bottles))} bt · {house?.name} ·{" "}
                     {formatWhen(movement.at)}
                   </span>
                 </li>
@@ -177,17 +186,25 @@ function Stat({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ReorderForm({ wine }: { wine: Wine }) {
+function SupplyPolicyForm({ wine }: { wine: Wine }) {
   const router = useRouter()
-  const id = useId()
-  const [value, setValue] = useState(String(wine.reorderCases))
+  const partnerId = useId()
+  const leadId = useId()
+  const targetId = useId()
+  const [partner, setPartner] = useState(wine.partner)
+  const [leadTimeDays, setLeadTimeDays] = useState(String(wine.leadTimeDays))
+  const [targetDaysOfStock, setTargetDaysOfStock] = useState(String(wine.targetDaysOfStock))
   const [pending, startTransition] = useTransition()
 
   function save(event: FormEvent) {
     event.preventDefault()
-    const reorderCases = Number(value)
     startTransition(async () => {
-      const result = await setReorder(wine.id, reorderCases)
+      const result = await setSupplyPolicy({
+        wineId: wine.id,
+        partner,
+        leadTimeDays: Number(leadTimeDays),
+        targetDaysOfStock: Number(targetDaysOfStock),
+      })
       if (!result.ok) {
         toast.error(result.error)
         return
@@ -198,14 +215,27 @@ function ReorderForm({ wine }: { wine: Wine }) {
   }
 
   return (
-    <form onSubmit={save} className="flex items-end gap-2">
-      <div className="grid flex-1 gap-1.5">
-        <Label htmlFor={id}>Reorder at (cases)</Label>
-        <Input id={id} inputMode="numeric" value={value} onChange={(event) => setValue(event.target.value)} />
+    <form onSubmit={save} className="space-y-3 rounded-lg bg-muted/50 p-3">
+      <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Reorder policy</p>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-1.5 sm:col-span-3">
+          <Label htmlFor={partnerId}>Winery partner</Label>
+          <Input id={partnerId} value={partner} onChange={(event) => setPartner(event.target.value)} />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor={leadId}>Lead time (days)</Label>
+          <Input id={leadId} inputMode="numeric" value={leadTimeDays} onChange={(event) => setLeadTimeDays(event.target.value)} />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor={targetId}>Target cover (days)</Label>
+          <Input id={targetId} inputMode="numeric" value={targetDaysOfStock} onChange={(event) => setTargetDaysOfStock(event.target.value)} />
+        </div>
+        <div className="flex items-end">
+          <Button type="submit" variant="secondary" disabled={pending} className="w-full">
+            {pending ? "Saving…" : "Save policy"}
+          </Button>
+        </div>
       </div>
-      <Button type="submit" variant="secondary" disabled={pending}>
-        {pending ? "Saving…" : "Save"}
-      </Button>
     </form>
   )
 }
@@ -215,7 +245,7 @@ export function EmptyWine() {
     <div className="flex h-full min-h-48 flex-col justify-end">
       <p className="font-heading text-2xl tracking-tight">Pick a wine</p>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        The panel shows the floor count, the hold, and what the bottles are worth.
+        Live inventory, order velocity, and reorder timing for each SKU.
       </p>
     </div>
   )
