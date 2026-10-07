@@ -59,6 +59,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
   const rows = useMemo(() => buildTableRows(books), [books])
 
   const [query, setQuery] = useState("")
+  const [winery, setWinery] = useState<string>("all")
   const [band, setBand] = useState<FilterBand>("all")
   const [sortKey, setSortKey] = useState<SortKey>("days30")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
@@ -67,9 +68,19 @@ export function DaysOnHandView({ books }: { books: Books }) {
   const inStockCount = useMemo(() => rows.filter((row) => row.line.onHand > 0).length, [rows])
   const tablePool = showNoStock ? rows.length : inStockCount
 
+  const wineries = useMemo(() => {
+    const names = new Set<string>()
+    for (const row of rows) {
+      const name = row.line.wine.producer.trim()
+      if (name) names.add(name)
+    }
+    return [...names].sort((a, b) => a.localeCompare(b))
+  }, [rows])
+
   const filtered = useMemo(() => {
     const matched = rows.filter((row) => {
       if (!showNoStock && row.line.onHand <= 0) return false
+      if (winery !== "all" && row.line.wine.producer !== winery) return false
       const statusBand = daysOnHandBandFromPace(
         row.line.onHand,
         row.pace30.dailyRate,
@@ -81,7 +92,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
       return hay.includes(query.trim().toLowerCase())
     })
     return sortTableRows(matched, sortKey, sortDir)
-  }, [rows, band, query, sortKey, sortDir, showNoStock])
+  }, [rows, band, query, winery, sortKey, sortDir, showNoStock])
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -131,6 +142,19 @@ export function DaysOnHandView({ books }: { books: Books }) {
           onChange={(event) => setQuery(event.target.value)}
           className="max-w-xs"
         />
+        <Select value={winery} onValueChange={(value) => setWinery(value ?? "all")}>
+          <SelectTrigger className="w-[min(100%,14rem)]">
+            <SelectValue placeholder="Winery" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All wineries</SelectItem>
+            {wineries.map((name) => (
+              <SelectItem key={name} value={name}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={band} onValueChange={(value) => setBand(value as FilterBand)}>
           <SelectTrigger className="w-[11rem]">
             <SelectValue placeholder="Filter" />
