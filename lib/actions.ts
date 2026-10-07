@@ -119,14 +119,12 @@ export async function importOrderHistoryCsv(formData: FormData): Promise<ActionR
   if (!result.ok) return { ok: false, error: result.error }
   const failed = persist(result.books)
   if (failed) return failed
-  const unmatchedNote =
-    result.unmatched > 0
-      ? ` ${result.unmatched} row${result.unmatched === 1 ? "" : "s"} did not match a SKU.`
-      : ""
-  return {
-    ok: true,
-    message: `Imported ${result.imported} order lines for sales pace.${unmatchedNote}`,
+  let message = `Imported ${result.imported} order lines for sales pace.`
+  if (result.unmatched > 0) {
+    const sample = result.unmatchedSamples.join(", ")
+    message += ` ${result.unmatched} row${result.unmatched === 1 ? "" : "s"} did not match a catalog SKU${sample ? ` (e.g. ${sample})` : ""}.`
   }
+  return { ok: true, message }
 }
 
 export async function setSalesPaceWindow(days: number): Promise<ActionResult> {

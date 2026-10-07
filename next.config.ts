@@ -3,6 +3,11 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // The desk is opened at 127.0.0.1; Next treats that as cross-origin in dev.
   allowedDevOrigins: ["127.0.0.1"],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   turbopack: {
     rules: {
       "*.css": {

@@ -31,10 +31,32 @@ export function parseOrderHistoryCsv(raw: string): ParsedRow[] | { error: string
   }
 
   const header = parseCsvLine(lines[0]).map(normalizeHeader)
-  const skuIndex = findColumn(header, ["sku", "product sku", "item sku", "product code", "code"])
-  const labelIndex = findColumn(header, ["label", "product", "wine", "description", "item"])
-  const dateIndex = findColumn(header, ["order date", "ship date", "shipped date", "date"])
-  const bottlesIndex = findColumn(header, ["bottles", "qty", "quantity", "units", "bottle qty"])
+  const skuIndex = findColumn(header, [
+    "sku",
+    "product sku",
+    "item sku",
+    "product code",
+    "item code",
+    "code",
+  ])
+  const labelIndex = findColumn(header, ["label", "product", "wine", "description", "item name", "item"])
+  const dateIndex = findColumn(header, [
+    "order date",
+    "ship date",
+    "shipped date",
+    "invoice date",
+    "date",
+  ])
+  const bottlesIndex = findColumn(header, [
+    "bottles",
+    "bottle",
+    "qty",
+    "quantity",
+    "units",
+    "bottle qty",
+    "qty bottles",
+    "shipped",
+  ])
   const accountIndex = findColumn(header, ["account", "customer", "buyer"])
   const referenceIndex = findColumn(header, ["reference", "order", "order number", "invoice", "po"])
 

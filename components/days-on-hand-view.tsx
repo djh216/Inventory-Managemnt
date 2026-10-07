@@ -4,7 +4,8 @@ import { useMemo, useState, useTransition, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { clearOrderHistory, importOrderHistoryCsv, setSalesPaceWindow } from "@/lib/actions"
+import { OrderHistoryUpload } from "@/components/order-history-upload"
+import { clearOrderHistory, setSalesPaceWindow } from "@/lib/actions"
 import { formatCount, formatWhen, wineName } from "@/lib/format"
 import {
   daysOnHandBand,
@@ -121,7 +122,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
           </a>
         </div>
         <div className="mt-4 flex flex-wrap items-end gap-4">
-          <OrderHistoryUploadForm />
+          <OrderHistoryUpload />
           <PaceWindowForm key={windowDays} windowDays={windowDays} />
           {orderLineCount > 0 ? <ClearHistoryButton /> : null}
         </div>
@@ -152,6 +153,15 @@ export function DaysOnHandView({ books }: { books: Books }) {
           Showing {filtered.length} of {lines.length} active SKUs
         </p>
       </section>
+
+      {orderLineCount === 0 && shipsInBooks(books) === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-8 text-center text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">Upload order history to calculate days on hand</p>
+          <p className="mx-auto mt-2 max-w-lg leading-6">
+            The dashboard needs recent sales volume per SKU. Upload a CSV above, or post shipments on the Orders page.
+          </p>
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10">
         <table className="w-full min-w-[56rem] text-sm">
@@ -218,41 +228,6 @@ function DaysOnHandPill({ band }: { band: DaysOnHandBand }) {
   )
 }
 
-function OrderHistoryUploadForm() {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = event.currentTarget
-    const data = new FormData(form)
-    startTransition(async () => {
-      const result = await importOrderHistoryCsv(data)
-      if (!result.ok) {
-        toast.error(result.error)
-        return
-      }
-      toast.success(result.message)
-      form.reset()
-      router.refresh()
-    })
-  }
-
-  return (
-    <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-      <div className="grid gap-1.5">
-        <Label htmlFor="order-history-file" className="text-xs">
-          Order history CSV
-        </Label>
-        <Input id="order-history-file" name="file" type="file" accept=".csv,text/csv" required />
-      </div>
-      <Button type="submit" disabled={pending}>
-        {pending ? "Uploading…" : "Upload orders"}
-      </Button>
-    </form>
-  )
-}
-
 function PaceWindowForm({ windowDays }: { windowDays: number }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -316,6 +291,10 @@ function ClearHistoryButton() {
       {pending ? "Clearing…" : "Clear uploaded orders"}
     </Button>
   )
+}
+
+function shipsInBooks(books: Books) {
+  return books.movements.filter((movement) => movement.type === "ship").length
 }
 
 function compareDaysOnHand(a: SupplyLine, b: SupplyLine) {
