@@ -216,7 +216,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
           aria-pressed={showNoStock}
           onClick={() => setShowNoStock((value) => !value)}
         >
-          {showNoStock ? "Including no-stock SKUs" : "Hide no-stock SKUs"}
+          {showNoStock ? "Including no-stock SKUs" : "hiding no-stock skus"}
         </Button>
         <p className="text-xs text-muted-foreground">
           Showing {filtered.length} of {tablePool} active SKUs
