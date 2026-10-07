@@ -25,6 +25,15 @@ npm run dev
 
 Open [http://127.0.0.1:4317](http://127.0.0.1:4317).
 
+## Cloud Agent environment
+
+This repo includes a [Cloud Agent](https://cursor.com/docs/cloud-agent) environment in [`.cursor/environment.json`](.cursor/environment.json):
+
+- **install** — `npm ci`
+- **start** — launches `npm run dev` (port **4317**) in tmux via [`.cursor/start-dev.sh`](.cursor/start-dev.sh)
+
+Link the environment to this GitHub repository in Cursor so new agents boot with dependencies installed and the dev server running.
+
 Data lives in `data/books.json` (local). The baseline upload is `data/inventory-upload.csv`. **Restore upload** re-imports the CSV.
 
 ## Workflow
