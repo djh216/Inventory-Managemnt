@@ -31,6 +31,16 @@ import {
 import { cn } from "@/lib/utils"
 
 type FilterBand = "all" | DaysOnHandBand
+
+const BAND_FILTER_LABELS: Record<FilterBand, string> = {
+  all: "All products",
+  urgent: "≤ 14 days",
+  tight: "15–45 days",
+  comfortable: "45+ days",
+  out: "Out at pace",
+  unknown: "No sales pace",
+  idle: "No stock",
+}
 type SortKey =
   | "product"
   | "onHand"
@@ -76,6 +86,14 @@ export function DaysOnHandView({ books }: { books: Books }) {
     }
     return [...names].sort((a, b) => a.localeCompare(b))
   }, [rows])
+
+  const producerSelectItems = useMemo(
+    () => ({
+      all: "Producer",
+      ...Object.fromEntries(wineries.map((name) => [name, name])),
+    }),
+    [wineries],
+  )
 
   const filtered = useMemo(() => {
     const matched = rows.filter((row) => {
@@ -142,17 +160,13 @@ export function DaysOnHandView({ books }: { books: Books }) {
           onChange={(event) => setQuery(event.target.value)}
           className="max-w-xs"
         />
-        <Select value={winery} onValueChange={(value) => setWinery(value ?? "all")}>
-          <SelectTrigger className="w-[min(100%,14rem)]">
-            <span
-              data-slot="select-value"
-              className={cn(
-                "line-clamp-1 flex flex-1 items-center gap-1.5 text-left",
-                winery === "all" && "text-muted-foreground",
-              )}
-            >
-              {winery === "all" ? "Producer" : winery}
-            </span>
+        <Select
+          items={producerSelectItems}
+          value={winery}
+          onValueChange={(value) => setWinery(value ?? "all")}
+        >
+          <SelectTrigger className="w-[min(100%,14rem)]" aria-label="Producer">
+            <SelectValue placeholder="Producer" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All producers</SelectItem>
@@ -163,8 +177,12 @@ export function DaysOnHandView({ books }: { books: Books }) {
             ))}
           </SelectContent>
         </Select>
-        <Select value={band} onValueChange={(value) => setBand(value as FilterBand)}>
-          <SelectTrigger className="w-[11rem]">
+        <Select
+          items={BAND_FILTER_LABELS}
+          value={band}
+          onValueChange={(value) => setBand((value as FilterBand) ?? "all")}
+        >
+          <SelectTrigger className="w-[11rem]" aria-label="Days on hand band">
             <SelectValue placeholder="Filter" />
           </SelectTrigger>
           <SelectContent>
