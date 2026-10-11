@@ -35,6 +35,7 @@ export function DaysOnHandServerView({
   filtered,
   summary,
   query,
+  producerOptions,
   orderLineCount,
   orderHistoryImportedAt,
   salesPaceWindowDays,
@@ -49,6 +50,7 @@ export function DaysOnHandServerView({
     urgent: number
   }
   query: DaysOnHandQuery
+  producerOptions: string[]
   orderLineCount: number
   orderHistoryImportedAt: string | null
   salesPaceWindowDays: number
@@ -56,10 +58,6 @@ export function DaysOnHandServerView({
 }) {
   const inStockCount = rows.filter((row) => row.line.onHand > 0).length
   const tablePool = query.showNoStock ? rows.length : inStockCount
-  const wineries = [...new Set(rows.map((row) => row.line.wine.producer.trim()).filter(Boolean))].sort(
-    (a, b) => a.localeCompare(b),
-  )
-
   return (
     <div className="w-full space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -110,7 +108,7 @@ export function DaysOnHandServerView({
             className="h-8 min-w-[12rem] rounded-lg border border-input bg-transparent px-2 text-sm text-foreground"
           >
             <option value="all">All producers</option>
-            {wineries.map((name) => (
+            {producerOptions.map((name) => (
               <option key={name} value={name}>
                 {name}
               </option>

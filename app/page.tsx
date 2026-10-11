@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { DaysOnHandServerView } from "@/components/days-on-hand-server-view"
+import { producersFromInventoryUpload } from "@/lib/csv-import"
 import { buildDaysOnHandTableRows, shipmentPostingCount } from "@/lib/days-on-hand-table"
 import { filterAndSortDaysOnHandRows, parseDaysOnHandQuery } from "@/lib/days-on-hand-query"
 import { inventoryHref, parseInventoryView } from "@/lib/inventory-routes"
@@ -31,6 +32,7 @@ export default async function Page({
   const now = new Date()
   const rows = buildDaysOnHandTableRows(books, now)
   const filtered = filterAndSortDaysOnHandRows(rows, query)
+  const producerOptions = producersFromInventoryUpload()
 
   return (
     <div data-page="wide" data-sidebar="wide" className="w-full">
@@ -39,6 +41,7 @@ export default async function Page({
         filtered={filtered}
         summary={daysOnHandSummary(books, now)}
         query={query}
+        producerOptions={producerOptions}
         orderLineCount={books.orderHistory?.length ?? 0}
         orderHistoryImportedAt={books.orderHistoryImportedAt ?? null}
         salesPaceWindowDays={salesPaceWindowDays(books)}

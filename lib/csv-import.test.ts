@@ -1,6 +1,12 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { booksFromUpload, importBooksFromCsv, inventoryCsvPath, readInventoryCsv } from "./csv-import"
+import {
+  booksFromUpload,
+  importBooksFromCsv,
+  inventoryCsvPath,
+  producersFromInventoryUpload,
+  readInventoryCsv,
+} from "./csv-import"
 import { winePosition } from "./inventory"
 
 test("loads the Oct 6 upload with 276 SKUs", () => {
@@ -33,6 +39,13 @@ test("maps on hand, available, and committed bottles from the CSV", () => {
   for (const line of books.stock) {
     assert.ok(line.onHandBottles >= line.allocatedBottles)
   }
+})
+
+test("lists producers parsed from upload product names", () => {
+  const producers = producersFromInventoryUpload()
+  assert.ok(producers.includes("Avignonesi"))
+  assert.ok(producers.includes("Bruno Rocca"))
+  assert.equal(producers.length, new Set(producers).size)
 })
 
 test("assigns labels and SKUs for rows missing a product code", () => {

@@ -1,3 +1,4 @@
+import { producerFromInventoryLabel } from "@/lib/csv-import"
 import { daysOnHandBandFromPace } from "@/lib/supply"
 import type { DaysOnHandTableRow } from "@/lib/days-on-hand-table"
 import type { PaceAtWindow } from "@/lib/supply"
@@ -86,7 +87,9 @@ export function toggleSortHref(query: DaysOnHandQuery, key: DaysOnHandSortKey) {
 export function filterAndSortDaysOnHandRows(rows: DaysOnHandTableRow[], query: DaysOnHandQuery) {
   const matched = rows.filter((row) => {
     if (!query.showNoStock && row.line.onHand <= 0) return false
-    if (query.winery !== "all" && row.line.wine.producer !== query.winery) return false
+    if (query.winery !== "all" && producerFromInventoryLabel(row.line.wine.label) !== query.winery) {
+      return false
+    }
     const statusBand = daysOnHandBandFromPace(
       row.line.onHand,
       row.pace30.dailyRate,

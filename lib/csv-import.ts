@@ -201,6 +201,21 @@ type ParsedLabel = {
   abv: number
 }
 
+/** Producer token parsed from an inventory upload Label (product name) cell. */
+export function producerFromInventoryLabel(label: string) {
+  return parseLabel(label).producer.trim()
+}
+
+/** Unique producer names from the inventory upload CSV Label column. */
+export function producersFromInventoryUpload(filePath = inventoryCsvPath()) {
+  const names = new Set<string>()
+  for (const row of readInventoryCsv(filePath)) {
+    const producer = producerFromInventoryLabel(row.label)
+    if (producer) names.add(producer)
+  }
+  return [...names].sort((a, b) => a.localeCompare(b))
+}
+
 function parseLabel(label: string): ParsedLabel {
   let working = label.trim()
   const formatMl = detectFormatMl(working)
