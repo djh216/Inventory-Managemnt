@@ -1,7 +1,6 @@
 import fs from "fs"
 import path from "path"
 import { cache } from "react"
-import { connection } from "next/server"
 import { seedBooks } from "@/lib/seed"
 import type { Books, Wine } from "@/lib/types"
 
@@ -90,10 +89,7 @@ export function writeBooks(books: Books) {
   fs.renameSync(tempPath, booksPath)
 }
 
-export const loadBooks = cache(async () => {
-  await connection()
-  return readBooks()
-})
+export const loadBooks = cache(async () => readBooks())
 
 export function restoreUploadBooks() {
   const books = seedBooks()
