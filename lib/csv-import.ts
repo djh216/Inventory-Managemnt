@@ -6,12 +6,14 @@ export const INVENTORY_UPLOAD_FILE = "inventory-upload.csv"
 export const UPLOAD_REFERENCE = "UPLOAD-100626"
 export const UPLOAD_DATE = "2026-10-06T12:00:00.000Z"
 
-type CsvRow = {
+export type InventoryCsvRow = {
   label: string
   sku: string
   onHand: number
   available: number
 }
+
+type CsvRow = InventoryCsvRow
 
 const PRODUCER_PREFIXES = [
   "Ciacci Piccolomini",
@@ -38,6 +40,44 @@ const PRODUCER_PREFIXES = [
 
 export function inventoryCsvPath() {
   return path.join(process.cwd(), "data", INVENTORY_UPLOAD_FILE)
+}
+
+export const INVENTORY_CSV_HEADER = "Label,SKU,Quantity On Hand,Quantity Available"
+
+export function writeInventoryUploadFile(contents: string, filePath = inventoryCsvPath()) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true })
+  fs.writeFileSync(filePath, contents.replace(/^\uFEFF/, ""), "utf8")
+}
+
+export function clearInventoryUploadFile(filePath = inventoryCsvPath()) {
+  writeInventoryUploadFile(`${INVENTORY_CSV_HEADER}\n`, filePath)
+}
+
+export function parseInventoryUploadCsv(raw: string): InventoryCsvRow[] | { error: string } {
+  const text = raw.replace(/^\uFEFF/, "")
+  const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0)
+  if (lines.length < 2) {
+    return { error: "The file needs a header row and at least one product row." }
+  }
+  const header = lines[0].toLowerCase()
+  if (!header.includes("label") && !header.includes("product")) {
+    return { error: "Include a Label (product name) column in the header." }
+  }
+  if (!header.includes("sku") && !header.includes("code")) {
+    return { error: "Include a SKU column in the header." }
+  }
+  const rows: InventoryCsvRow[] = []
+  for (let index = 1; index < lines.length; index += 1) {
+    const row = parseCsvLine(lines[index])
+    if (!row) {
+      return { error: `Row ${index + 1} could not be parsed. Use Label, SKU, on hand, and available columns.` }
+    }
+    rows.push(row)
+  }
+  if (rows.length === 0) {
+    return { error: "No product rows found below the header." }
+  }
+  return rows
 }
 
 export function readInventoryCsv(filePath = inventoryCsvPath()): CsvRow[] {
@@ -154,7 +194,11 @@ export function booksFromUpload(rows: CsvRow[]): Books {
 }
 
 export function importBooksFromCsv(filePath = inventoryCsvPath()): Books {
-  return booksFromUpload(readInventoryCsv(filePath))
+  const rows = readInventoryCsv(filePath)
+  return {
+    ...booksFromUpload(rows),
+    inventoryImportedAt: rows.length > 0 ? UPLOAD_DATE : null,
+  }
 }
 
 function primaryLocation(rows: CsvRow[]): Location {

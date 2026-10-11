@@ -7,6 +7,8 @@ export async function AppNavLoader() {
   return (
     <AppNav
       alertCount={alertCount(books)}
+      skuCount={books.wines.length}
+      inventoryImportedAt={books.inventoryImportedAt ?? null}
       orderLineCount={books.orderHistory?.length ?? 0}
       orderHistoryImportedAt={books.orderHistoryImportedAt ?? null}
       salesPaceWindowDays={salesPaceWindowDays(books)}
