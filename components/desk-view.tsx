@@ -1,10 +1,7 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
-import { buttonVariants } from "@/components/ui/button"
-import { Button } from "@/components/ui/button"
-import { MovementDialog } from "@/components/movement-dialog"
+import { inventoryHref, inventoryProductHref } from "@/lib/inventory-routes"
 import { SupplyPill } from "@/components/supply-pill"
 import { formatCount, formatDay, wineName } from "@/lib/format"
 import { winePosition } from "@/lib/inventory"
@@ -17,17 +14,13 @@ import {
   snoozedReorderAlerts,
   salesPaceWindowDays,
 } from "@/lib/supply"
-import type { Books, PostingPreset } from "@/lib/types"
+import type { Books } from "@/lib/types"
 
-export function DeskView({ books, today }: { books: Books; today: string }) {
+export function DeskView({ books }: { books: Books }) {
   const paceWindowDays = salesPaceWindowDays(books)
   const alerts = reorderAlerts(books)
   const snoozed = snoozedReorderAlerts(books)
   const partners = partnerRollups(books)
-  const [open, setOpen] = useState(false)
-  const [preset, setPreset] = useState<PostingPreset | null>(null)
-  const [session, setSession] = useState(0)
-
   let onHand = 0
   let available = 0
   for (const wine of books.wines) {
@@ -36,31 +29,8 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
     available += position.free
   }
 
-  function request(next: PostingPreset) {
-    setPreset(next)
-    setSession((value) => value + 1)
-    setOpen(true)
-  }
-
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{today}</p>
-          <h1 className="mt-1 font-heading text-4xl tracking-tight">Live inventory</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Track available bottles in real time, measure depletion from posted shipments, and see when to
-            reorder from winery partners before stock runs out.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => request({ type: "ship" })}>Post a shipment</Button>
-          <Link href="/days-on-hand" className={buttonVariants({ variant: "outline" })}>
-            Days on hand
-          </Link>
-        </div>
-      </header>
-
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Figure label="Available now" value={formatCount(available)} detail="Bottles free to ship today" />
         <Figure label="On hand" value={formatCount(onHand)} detail="Includes committed inventory" />
@@ -84,8 +54,8 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
               Place winery POs when days of supply drop inside lead time ({alerts.length} active).
             </p>
           </div>
-          <Link href="/catalog?sort=supply" className="text-xs underline-offset-2 hover:underline">
-            Full catalog
+          <Link href={inventoryHref("products", { sort: "supply" })} className="text-xs underline-offset-2 hover:underline">
+            All products
           </Link>
         </div>
         {alerts.length === 0 ? (
@@ -113,7 +83,7 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
                 {alerts.map((line) => (
                   <tr key={line.wine.id} className="border-t border-border">
                     <td className="px-4 py-3">
-                      <Link href={`/catalog?wine=${line.wine.id}`} className="font-medium hover:underline">
+                      <Link href={inventoryProductHref(line.wine.id)} className="font-medium hover:underline">
                         {wineName(line.wine)}
                       </Link>
                       <p className="font-mono text-[11px] text-muted-foreground">{line.wine.sku}</p>
@@ -155,7 +125,7 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
             {snoozed.map((line) => (
               <li key={line.wine.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
                 <div>
-                  <Link href={`/catalog?wine=${line.wine.id}`} className="font-medium hover:underline">
+                  <Link href={inventoryProductHref(line.wine.id)} className="font-medium hover:underline">
                     {wineName(line.wine)}
                   </Link>
                   <p className="font-mono text-[11px] text-muted-foreground">{line.wine.sku}</p>
@@ -195,7 +165,6 @@ export function DeskView({ books, today }: { books: Books; today: string }) {
         </section>
       ) : null}
 
-      <MovementDialog key={session} books={books} open={open} onOpenChange={setOpen} preset={preset} />
     </div>
   )
 }
