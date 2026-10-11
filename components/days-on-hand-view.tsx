@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import { SidebarOrderHistory } from "@/components/sidebar-order-history"
 import { formatCount, wineName } from "@/lib/format"
+import { inventoryProductHref } from "@/lib/inventory-routes"
 import {
   DAYS_ON_HAND_TABLE_WINDOWS,
   daysOnHandBandFromPace,
@@ -289,7 +290,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
             {filtered.map((row) => (
                 <tr key={row.line.wine.id} className="border-t border-border">
                   <td className="px-4 py-3 text-left">
-                    <Link href={`/catalog?wine=${row.line.wine.id}`} className="font-medium hover:underline">
+                    <Link href={inventoryProductHref(row.line.wine.id)} className="font-medium hover:underline">
                       {wineName(row.line.wine)}
                     </Link>
                     <p className="font-mono text-[11px] text-muted-foreground">{row.line.wine.sku}</p>

@@ -12,7 +12,15 @@ import { fullestFreeLocation, lineAt, lineFree, winePosition } from "@/lib/inven
 import type { Books, PostingPreset } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
-export function StockView({ books, initialHouse }: { books: Books; initialHouse?: string }) {
+export function StockView({
+  books,
+  initialHouse,
+  embedded = false,
+}: {
+  books: Books
+  initialHouse?: string
+  embedded?: boolean
+}) {
   const knownHouse = books.locations.some((location) => location.id === initialHouse)
     ? initialHouse ?? "all"
     : "all"
@@ -64,13 +72,15 @@ export function StockView({ books, initialHouse }: { books: Books; initialHouse?
 
   return (
     <div className="space-y-5">
-      <header>
-        <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Stock</p>
-        <h1 className="mt-1 font-heading text-4xl tracking-tight">Floor stock</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Bottle counts from the upload: on hand, committed, and available. Shipments only draw from available bottles.
-        </p>
-      </header>
+      {!embedded ? (
+        <header>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Stock</p>
+          <h1 className="mt-1 font-heading text-4xl tracking-tight">Floor stock</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Bottle counts from the upload: on hand, committed, and available. Shipments only draw from available bottles.
+          </p>
+        </header>
+      ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Input

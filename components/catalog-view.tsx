@@ -30,10 +30,12 @@ export function CatalogView({
   books,
   initialWineId,
   initialSort,
+  embedded = false,
 }: {
   books: Books
   initialWineId?: string
   initialSort?: string
+  embedded?: boolean
 }) {
   const [query, setQuery] = useState("")
   const [color, setColor] = useState<WineColor | "all">("all")
@@ -120,23 +122,25 @@ export function CatalogView({
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Catalog</p>
-          <h1 className="mt-1 font-heading text-4xl tracking-tight">The book</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Live bottle counts with days-of-supply from posted shipments. Reorder alerts use each wine&apos;s winery lead time.
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            setAddSession((value) => value + 1)
-            setAdding(true)
-          }}
-        >
-          Add a wine
-        </Button>
-      </header>
+      {!embedded ? (
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Catalog</p>
+            <h1 className="mt-1 font-heading text-4xl tracking-tight">The book</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Live bottle counts with days-of-supply from posted shipments. Reorder alerts use each wine&apos;s winery lead time.
+            </p>
+          </div>
+          <Button
+            onClick={() => {
+              setAddSession((value) => value + 1)
+              setAdding(true)
+            }}
+          >
+            Add a wine
+          </Button>
+        </header>
+      ) : null}
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <Input
@@ -190,6 +194,17 @@ export function CatalogView({
         <p className="text-xs text-muted-foreground lg:ml-auto">
           {rows.length} {rows.length === 1 ? "wine" : "wines"}
         </p>
+        {embedded ? (
+          <Button
+            className="lg:ml-0"
+            onClick={() => {
+              setAddSession((value) => value + 1)
+              setAdding(true)
+            }}
+          >
+            Add a wine
+          </Button>
+        ) : null}
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto">

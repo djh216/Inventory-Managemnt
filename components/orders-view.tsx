@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { formatClock, formatCount, formatDay, pacificDayKey, wineName } from "@/lib/format"
+import { inventoryProductHref } from "@/lib/inventory-routes"
 import { bottlesShippedInWindow, salesPaceWindowDays } from "@/lib/supply"
 import type { Books } from "@/lib/types"
 
@@ -65,7 +66,7 @@ export function OrdersView({ books }: { books: Books }) {
                       <p className={showDay ? "mt-1" : ""}>{formatClock(movement.at)}</p>
                     </td>
                     <td className="px-2 py-3">
-                      <Link href={`/catalog?wine=${wine.id}`} className="hover:underline">
+                      <Link href={inventoryProductHref(wine.id)} className="hover:underline">
                         {wineName(wine)}
                       </Link>
                     </td>
