@@ -21,6 +21,8 @@ export type DaysOnHandSortDir = "asc" | "desc"
 
 export type DaysOnHandFilterBand = "all" | "urgent" | "tight" | "comfortable" | "out" | "unknown" | "idle"
 
+export const DAYS_ON_HAND_PAGE_SIZE = 50
+
 export type DaysOnHandQuery = {
   q: string
   winery: string
@@ -28,6 +30,7 @@ export type DaysOnHandQuery = {
   sortKey: DaysOnHandSortKey
   sortDir: DaysOnHandSortDir
   showNoStock: boolean
+  page: number
 }
 
 const SORT_KEYS = new Set<string>([
@@ -61,6 +64,7 @@ export function parseDaysOnHandQuery(raw: Record<string, string | string[] | und
     sortKey: SORT_KEYS.has(sortKeyRaw) ? (sortKeyRaw as DaysOnHandSortKey) : "days30",
     sortDir: pick("sortDir") === "desc" ? "desc" : "asc",
     showNoStock: pick("showNoStock") === "1",
+    page: Math.max(1, Number.parseInt(pick("page"), 10) || 1),
   }
 }
 
@@ -73,6 +77,7 @@ export function daysOnHandHref(query: DaysOnHandQuery, patch: Partial<DaysOnHand
   if (next.sortKey !== "days30") params.set("sortKey", next.sortKey)
   if (next.sortDir !== "asc") params.set("sortDir", next.sortDir)
   if (next.showNoStock) params.set("showNoStock", "1")
+  if (next.page > 1) params.set("page", String(next.page))
   const serialized = params.toString()
   return serialized ? `/?${serialized}` : "/"
 }
@@ -101,6 +106,32 @@ export function filterAndSortDaysOnHandRows(rows: DaysOnHandTableRow[], query: D
     return hay.includes(query.q.trim().toLowerCase())
   })
   return sortTableRows(matched, query.sortKey, query.sortDir)
+}
+
+export type DaysOnHandPageSlice = {
+  page: number
+  pageSize: number
+  totalPages: number
+  totalRows: number
+  rows: DaysOnHandTableRow[]
+}
+
+export function paginateDaysOnHandRows(
+  rows: DaysOnHandTableRow[],
+  query: DaysOnHandQuery,
+): DaysOnHandPageSlice {
+  const pageSize = DAYS_ON_HAND_PAGE_SIZE
+  const totalRows = rows.length
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
+  const page = Math.min(query.page, totalPages)
+  const start = (page - 1) * pageSize
+  return {
+    page,
+    pageSize,
+    totalPages,
+    totalRows,
+    rows: rows.slice(start, start + pageSize),
+  }
 }
 
 function sortKeyForWindow(days: number): DaysOnHandSortKey {

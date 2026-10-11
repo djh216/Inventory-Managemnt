@@ -1,11 +1,10 @@
+import { Suspense } from "react"
 import { redirect } from "next/navigation"
-import { DaysOnHandServerView } from "@/components/days-on-hand-server-view"
+import { DaysOnHandPageContent } from "@/components/days-on-hand-page-content"
+import { DaysOnHandTableSkeleton } from "@/components/days-on-hand-table-skeleton"
 import { producersFromInventoryUpload } from "@/lib/csv-import"
-import { buildDaysOnHandTableRows, shipmentPostingCount } from "@/lib/days-on-hand-table"
-import { filterAndSortDaysOnHandRows, parseDaysOnHandQuery } from "@/lib/days-on-hand-query"
+import { parseDaysOnHandQuery } from "@/lib/days-on-hand-query"
 import { inventoryHref, parseInventoryView } from "@/lib/inventory-routes"
-import { daysOnHandSummary, salesPaceWindowDays } from "@/lib/supply"
-import { loadBooks } from "@/lib/store"
 
 export const metadata = {
   title: "Days on hand",
@@ -28,25 +27,23 @@ export default async function Page({
   }
 
   const query = parseDaysOnHandQuery(params)
-  const books = await loadBooks()
-  const now = new Date()
-  const rows = buildDaysOnHandTableRows(books, now)
-  const filtered = filterAndSortDaysOnHandRows(rows, query)
   const producerOptions = producersFromInventoryUpload()
 
   return (
-    <div data-page="wide" data-sidebar="wide" className="w-full">
-      <DaysOnHandServerView
-        rows={rows}
-        filtered={filtered}
-        summary={daysOnHandSummary(books, now)}
-        query={query}
-        producerOptions={producerOptions}
-        orderLineCount={books.orderHistory?.length ?? 0}
-        orderHistoryImportedAt={books.orderHistoryImportedAt ?? null}
-        salesPaceWindowDays={salesPaceWindowDays(books)}
-        shipmentCount={shipmentPostingCount(books)}
-      />
+    <div data-page="wide" data-sidebar="wide" className="w-full space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Sales pace</p>
+          <h1 className="mt-1 font-heading text-4xl tracking-tight">Days on hand</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Upload order history to set each product&apos;s sales pace. The table shows days on hand at 30-, 90-, and
+            180-day windows with bottles sold, daily pace, and days on hand per period.
+          </p>
+        </div>
+      </header>
+      <Suspense fallback={<DaysOnHandTableSkeleton />}>
+        <DaysOnHandPageContent query={query} producerOptions={producerOptions} />
+      </Suspense>
     </div>
   )
 }

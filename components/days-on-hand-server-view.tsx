@@ -9,6 +9,7 @@ import {
   sortKeyForSold,
   sortKeyForWindow,
   toggleSortHref,
+  type DaysOnHandPageSlice,
   type DaysOnHandQuery,
 } from "@/lib/days-on-hand-query"
 import { inventoryProductHref } from "@/lib/inventory-routes"
@@ -33,6 +34,8 @@ const BAND_FILTER_LABELS: Record<DaysOnHandQuery["band"], string> = {
 export function DaysOnHandServerView({
   rows,
   filtered,
+  tableRows,
+  pagination,
   summary,
   query,
   producerOptions,
@@ -43,6 +46,8 @@ export function DaysOnHandServerView({
 }: {
   rows: DaysOnHandTableRow[]
   filtered: DaysOnHandTableRow[]
+  tableRows: DaysOnHandTableRow[]
+  pagination: DaysOnHandPageSlice
   summary: {
     withPace: number
     withoutPace: number
@@ -60,17 +65,6 @@ export function DaysOnHandServerView({
   const tablePool = query.showNoStock ? rows.length : inStockCount
   return (
     <div className="w-full space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Sales pace</p>
-          <h1 className="mt-1 font-heading text-4xl tracking-tight">Days on hand</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Upload order history to set each product&apos;s sales pace. The table shows days on hand at{" "}
-            30-, 90-, and 180-day windows with bottles sold, daily pace, and days on hand per period.
-          </p>
-        </div>
-      </header>
-
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi label="SKUs with pace" value={String(summary.withPace)} detail="Enough order history in the window" />
         <Kpi label="Need order data" value={String(summary.withoutPace)} detail="No sales in the pace window" />
@@ -145,9 +139,12 @@ export function DaysOnHandServerView({
           {query.showNoStock ? "Including no-stock SKUs" : "Hiding no-stock SKUs"}
         </Link>
         <p className="text-xs text-muted-foreground">
-          Showing {filtered.length} of {tablePool} active SKUs
+          {filtered.length} of {tablePool} active SKUs match
           {!query.showNoStock && rows.length > inStockCount
-            ? ` (${formatCount(rows.length - inStockCount)} hidden)`
+            ? ` (${formatCount(rows.length - inStockCount)} no-stock hidden)`
+            : null}
+          {pagination.totalPages > 1
+            ? ` · Page ${pagination.page} of ${pagination.totalPages} (${formatCount(pagination.totalRows)} rows)`
             : null}
         </p>
       </form>
@@ -196,7 +193,7 @@ export function DaysOnHandServerView({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row) => (
+            {tableRows.map((row) => (
               <tr key={row.line.wine.id} className="border-t border-border">
                 <td className="px-4 py-3 text-left">
                   <Link href={inventoryProductHref(row.line.wine.id)} className="font-medium hover:underline">
@@ -228,6 +225,34 @@ export function DaysOnHandServerView({
           <p className="px-4 py-10 text-sm text-muted-foreground">No products match this filter.</p>
         ) : null}
       </div>
+
+      {pagination.totalPages > 1 ? (
+        <nav className="flex flex-wrap items-center justify-center gap-2 text-sm" aria-label="Table pages">
+          {pagination.page > 1 ? (
+            <Link
+              href={daysOnHandHref(query, { page: pagination.page - 1 })}
+              className="inline-flex h-8 items-center rounded-lg border border-input px-3 hover:bg-muted"
+            >
+              Previous
+            </Link>
+          ) : (
+            <span className="inline-flex h-8 items-center px-3 text-muted-foreground">Previous</span>
+          )}
+          <span className="tabular-nums text-muted-foreground">
+            Page {pagination.page} / {pagination.totalPages}
+          </span>
+          {pagination.page < pagination.totalPages ? (
+            <Link
+              href={daysOnHandHref(query, { page: pagination.page + 1 })}
+              className="inline-flex h-8 items-center rounded-lg border border-input px-3 hover:bg-muted"
+            >
+              Next
+            </Link>
+          ) : (
+            <span className="inline-flex h-8 items-center px-3 text-muted-foreground">Next</span>
+          )}
+        </nav>
+      ) : null}
     </div>
   )
 }
