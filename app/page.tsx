@@ -2,7 +2,9 @@ import { redirect } from "next/navigation"
 import { Suspense } from "react"
 import { DaysOnHandView } from "@/components/days-on-hand-view"
 import { PageSkeleton } from "@/components/page-skeleton"
+import { buildDaysOnHandTableRows, shipmentPostingCount } from "@/lib/days-on-hand-table"
 import { inventoryHref, parseInventoryView } from "@/lib/inventory-routes"
+import { daysOnHandSummary, salesPaceWindowDays } from "@/lib/supply"
 import { loadBooks } from "@/lib/store"
 
 export const metadata = {
@@ -47,9 +49,17 @@ async function HomeLoader({
     )
   }
   const books = await loadBooks()
+  const now = new Date()
   return (
     <div data-page="wide" data-sidebar="wide" className="w-full">
-      <DaysOnHandView books={books} />
+      <DaysOnHandView
+        rows={buildDaysOnHandTableRows(books, now)}
+        summary={daysOnHandSummary(books, now)}
+        orderLineCount={books.orderHistory?.length ?? 0}
+        orderHistoryImportedAt={books.orderHistoryImportedAt ?? null}
+        salesPaceWindowDays={salesPaceWindowDays(books)}
+        shipmentCount={shipmentPostingCount(books)}
+      />
     </div>
   )
 }

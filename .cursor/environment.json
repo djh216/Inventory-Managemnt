@@ -1,4 +1,10 @@
 {
   "install": "npm ci",
-  "start": "bash .cursor/start-dev.sh"
+  "start": "bash .cursor/start-dev.sh",
+  "ports": [
+    {
+      "name": "web",
+      "port": 4317
+    }
+  ]
 }

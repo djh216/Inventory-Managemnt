@@ -5,22 +5,16 @@ import Link from "next/link"
 import { SidebarOrderHistory } from "@/components/sidebar-order-history"
 import { formatCount, wineName } from "@/lib/format"
 import { inventoryProductHref } from "@/lib/inventory-routes"
+import type { DaysOnHandTableRow } from "@/lib/days-on-hand-table"
 import {
   DAYS_ON_HAND_TABLE_WINDOWS,
   daysOnHandBandFromPace,
-  daysOnHandSummary,
   formatBottlesPerDayTable,
   formatDaysOnHandTable,
   formatDaysRemaining,
-  paceAtWindow,
-  salesPaceWindowDays,
-  supplyLines,
-  totalBottlesSold,
   type DaysOnHandBand,
   type PaceAtWindow,
-  type SupplyLine,
 } from "@/lib/supply"
-import type { Books } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -58,19 +52,29 @@ type SortKey =
   | "days180"
 type SortDir = "asc" | "desc"
 
-type TableRow = {
-  line: SupplyLine
-  totalSold: number
-  pace30: PaceAtWindow
-  pace90: PaceAtWindow
-  pace180: PaceAtWindow
-}
+type TableRow = DaysOnHandTableRow
 
-export function DaysOnHandView({ books }: { books: Books }) {
-  const summary = daysOnHandSummary(books)
-  const orderLineCount = books.orderHistory?.length ?? 0
-  const paceWindowDays = salesPaceWindowDays(books)
-  const rows = useMemo(() => buildTableRows(books), [books])
+export function DaysOnHandView({
+  rows: initialRows,
+  summary,
+  orderLineCount,
+  orderHistoryImportedAt,
+  salesPaceWindowDays: paceWindowDays,
+  shipmentCount,
+}: {
+  rows: DaysOnHandTableRow[]
+  summary: {
+    withPace: number
+    withoutPace: number
+    medianDays: number | null
+    urgent: number
+  }
+  orderLineCount: number
+  orderHistoryImportedAt: string | null
+  salesPaceWindowDays: number
+  shipmentCount: number
+}) {
+  const rows = initialRows
 
   const [query, setQuery] = useState("")
   const [winery, setWinery] = useState<string>("all")
@@ -152,7 +156,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
       <section className="rounded-xl bg-sidebar p-4 text-sidebar-foreground ring-1 ring-sidebar-border md:hidden">
         <SidebarOrderHistory
           orderLineCount={orderLineCount}
-          orderHistoryImportedAt={books.orderHistoryImportedAt ?? null}
+          orderHistoryImportedAt={orderHistoryImportedAt}
           salesPaceWindowDays={paceWindowDays}
         />
       </section>
@@ -216,7 +220,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
         </p>
       </section>
 
-      {orderLineCount === 0 && shipsInBooks(books) === 0 ? (
+      {orderLineCount === 0 && shipmentCount === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-8 text-center text-sm text-muted-foreground">
           <p className="font-medium text-foreground">Upload order history to calculate days on hand</p>
           <p className="mx-auto mt-2 max-w-lg leading-6">
@@ -352,10 +356,6 @@ function Kpi({ label, value, detail }: { label: string; value: string; detail: s
   )
 }
 
-function shipsInBooks(books: Books) {
-  return books.movements.filter((movement) => movement.type === "ship").length
-}
-
 function SortableHeader({
   label,
   active,
@@ -403,18 +403,6 @@ function SortableHeader({
       {align === "center" ? <div className="flex justify-center">{control}</div> : control}
     </th>
   )
-}
-
-function buildTableRows(books: Books): TableRow[] {
-  return supplyLines(books)
-    .filter((line) => line.wine.active)
-    .map((line) => ({
-      line,
-      totalSold: totalBottlesSold(books, line.wine.id),
-      pace30: paceAtWindow(books, line.wine, 30, new Date(), "onHand"),
-      pace90: paceAtWindow(books, line.wine, 90, new Date(), "onHand"),
-      pace180: paceAtWindow(books, line.wine, 180, new Date(), "onHand"),
-    }))
 }
 
 function sortKeyForWindow(days: number): SortKey {
