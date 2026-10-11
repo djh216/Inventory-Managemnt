@@ -67,6 +67,19 @@ export function paceAtWindow(
   return { windowDays, shippedWindow, dailyRate, daysRemaining }
 }
 
+export function totalBottlesSold(books: Books, wineId: string) {
+  let total = 0
+  for (const movement of books.movements) {
+    if (movement.wineId !== wineId || movement.type !== "ship") continue
+    total += movement.bottles
+  }
+  for (const line of books.orderHistory ?? []) {
+    if (line.wineId !== wineId) continue
+    total += line.bottles
+  }
+  return total
+}
+
 export function bottlesShippedInWindow(books: Books, wineId: string, windowDays: number, now = new Date()) {
   const start = now.getTime() - windowDays * 24 * 60 * 60 * 1000
   let total = 0
