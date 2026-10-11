@@ -15,6 +15,7 @@ import {
   paceAtWindow,
   salesPaceWindowDays,
   supplyLines,
+  totalBottlesSold,
   type DaysOnHandBand,
   type PaceAtWindow,
   type SupplyLine,
@@ -45,6 +46,7 @@ const BAND_FILTER_LABELS: Record<FilterBand, string> = {
 type SortKey =
   | "product"
   | "onHand"
+  | "totalSold"
   | "sold30"
   | "rate30"
   | "days30"
@@ -58,6 +60,7 @@ type SortDir = "asc" | "desc"
 
 type TableRow = {
   line: SupplyLine
+  totalSold: number
   pace30: PaceAtWindow
   pace90: PaceAtWindow
   pace180: PaceAtWindow
@@ -223,7 +226,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
       ) : null}
 
       <div className="w-full overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10">
-        <table className="w-full min-w-[72rem] text-sm">
+        <table className="w-full min-w-[76rem] text-sm">
           <thead className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
             <tr>
               <th rowSpan={2} className="px-4 py-3 text-left align-bottom font-medium">
@@ -242,6 +245,16 @@ export function DaysOnHandView({ books }: { books: Books }) {
                   active={sortKey === "onHand"}
                   dir={sortDir}
                   onClick={() => toggleSort("onHand")}
+                  asCell={false}
+                  align="center"
+                />
+              </th>
+              <th rowSpan={2} className="px-2 py-3 text-center align-bottom font-medium">
+                <SortableHeader
+                  label="Total sold"
+                  active={sortKey === "totalSold"}
+                  dir={sortDir}
+                  onClick={() => toggleSort("totalSold")}
                   asCell={false}
                   align="center"
                 />
@@ -296,6 +309,7 @@ export function DaysOnHandView({ books }: { books: Books }) {
                     <p className="font-mono text-[11px] text-muted-foreground">{row.line.wine.sku}</p>
                   </td>
                   <td className="px-2 py-3 text-center tabular-nums">{formatCount(row.line.onHand)}</td>
+                  <td className="px-2 py-3 text-center tabular-nums">{formatCount(row.totalSold)}</td>
                   {DAYS_ON_HAND_TABLE_WINDOWS.flatMap((days) => {
                     const pace = paceForWindowDays(row, days)
                     return [
@@ -396,6 +410,7 @@ function buildTableRows(books: Books): TableRow[] {
     .filter((line) => line.wine.active)
     .map((line) => ({
       line,
+      totalSold: totalBottlesSold(books, line.wine.id),
       pace30: paceAtWindow(books, line.wine, 30, new Date(), "onHand"),
       pace90: paceAtWindow(books, line.wine, 90, new Date(), "onHand"),
       pace180: paceAtWindow(books, line.wine, 180, new Date(), "onHand"),
@@ -434,7 +449,7 @@ function paceForSortKey(row: TableRow, key: SortKey): PaceAtWindow | null {
 }
 
 function isWindowMetricSort(key: SortKey) {
-  return key !== "product" && key !== "onHand"
+  return key !== "product" && key !== "onHand" && key !== "totalSold"
 }
 
 function defaultSortDir(key: SortKey): SortDir {
@@ -472,6 +487,7 @@ function compareSortKey(a: TableRow, b: TableRow, key: SortKey) {
     )
   }
   if (key === "onHand") return a.line.onHand - b.line.onHand
+  if (key === "totalSold") return a.totalSold - b.totalSold
   if (key === "sold30") return a.pace30.shippedWindow - b.pace30.shippedWindow
   if (key === "sold90") return a.pace90.shippedWindow - b.pace90.shippedWindow
   if (key === "sold180") return a.pace180.shippedWindow - b.pace180.shippedWindow
