@@ -6,6 +6,7 @@ import {
   paceAtWindow,
   reorderAlerts,
   supplyLine,
+  totalBottlesSold,
 } from "./supply"
 import type { Books, Wine } from "./types"
 
@@ -59,6 +60,32 @@ function books(target = wine()): Books {
     ],
   }
 }
+
+test("totalBottlesSold sums all shipments and uploaded order lines", () => {
+  const start = books()
+  start.movements.push({
+    id: "m-old",
+    at: "2025-01-01T12:00:00.000Z",
+    type: "ship",
+    wineId: "w-1",
+    locationId: "main",
+    bottles: 60,
+    reference: "OLD",
+    account: "Account A",
+    note: "",
+  })
+  start.orderHistory = [
+    {
+      id: "oh-1",
+      at: "2026-09-01T12:00:00.000Z",
+      wineId: "w-1",
+      bottles: 24,
+      account: "A",
+      reference: "ORD-1",
+    },
+  ]
+  assert.equal(totalBottlesSold(start, "w-1"), 224)
+})
 
 test("derives daily rate from shipments in the velocity window", () => {
   const now = new Date("2026-10-07T12:00:00.000Z")
