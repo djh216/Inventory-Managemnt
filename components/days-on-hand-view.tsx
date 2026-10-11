@@ -1,7 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { PageSkeleton } from "@/components/page-skeleton"
 import { SidebarOrderHistory } from "@/components/sidebar-order-history"
 import { formatCount, wineName } from "@/lib/format"
 import { inventoryProductHref } from "@/lib/inventory-routes"
@@ -54,14 +55,7 @@ type SortDir = "asc" | "desc"
 
 type TableRow = DaysOnHandTableRow
 
-export function DaysOnHandView({
-  rows: initialRows,
-  summary,
-  orderLineCount,
-  orderHistoryImportedAt,
-  salesPaceWindowDays: paceWindowDays,
-  shipmentCount,
-}: {
+type DaysOnHandPayload = {
   rows: DaysOnHandTableRow[]
   summary: {
     withPace: number
@@ -73,9 +67,55 @@ export function DaysOnHandView({
   orderHistoryImportedAt: string | null
   salesPaceWindowDays: number
   shipmentCount: number
-}) {
-  const rows = initialRows
+}
 
+export function DaysOnHandView() {
+  const [payload, setPayload] = useState<DaysOnHandPayload | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const response = await fetch("/api/days-on-hand", { cache: "no-store" })
+        if (!response.ok) throw new Error("request failed")
+        const data = (await response.json()) as DaysOnHandPayload
+        if (!cancelled) setPayload(data)
+      } catch {
+        if (!cancelled) {
+          setLoadError("Could not load days on hand data. Refresh the page or restart the dev server.")
+        }
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (loadError) {
+    return (
+      <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-10 text-center text-sm text-muted-foreground">
+        <p className="font-medium text-foreground">{loadError}</p>
+      </div>
+    )
+  }
+
+  if (!payload) {
+    return <PageSkeleton label="days on hand" />
+  }
+
+  return <DaysOnHandDashboard {...payload} />
+}
+
+function DaysOnHandDashboard({
+  rows,
+  summary,
+  orderLineCount,
+  orderHistoryImportedAt,
+  salesPaceWindowDays: paceWindowDays,
+  shipmentCount,
+}: DaysOnHandPayload) {
   const [query, setQuery] = useState("")
   const [winery, setWinery] = useState<string>("all")
   const [band, setBand] = useState<FilterBand>("all")

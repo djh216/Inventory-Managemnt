@@ -12,7 +12,7 @@ export function PageSkeleton({ label }: { label: string }) {
         ))}
       </div>
       <div className="h-80 rounded-xl bg-card ring-1 ring-foreground/10" />
-      <p className="sr-only">Loading {label}</p>
+      <p className="text-center text-sm text-muted-foreground">Loading {label}…</p>
     </div>
   )
 }
