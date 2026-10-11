@@ -25,7 +25,7 @@ export function OrdersView({ books }: { books: Books }) {
         <h1 className="mt-1 font-heading text-4xl tracking-tight">Outbound orders</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
           Every shipment posting is treated as a customer order. Uploaded order history on{" "}
-          <Link href="/days-on-hand" className="underline-offset-2 hover:underline">
+          <Link href="/" className="underline-offset-2 hover:underline">
             Days on hand
           </Link>{" "}
           plus the last {windowDays} days of shipments drive sales pace and days on hand.

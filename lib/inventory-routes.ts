@@ -1,3 +1,5 @@
+export const INVENTORY_BASE = "/inventory"
+
 export type InventoryView = "overview" | "products" | "floor"
 
 export function parseInventoryView(value: string | undefined): InventoryView {
@@ -20,7 +22,7 @@ export function inventoryHref(
   if (params.sort) query.set("sort", params.sort)
   if (params.house) query.set("house", params.house)
   const serialized = query.toString()
-  return serialized ? `/?${serialized}` : "/"
+  return serialized ? `${INVENTORY_BASE}?${serialized}` : INVENTORY_BASE
 }
 
 export function inventoryProductHref(wineId: string, sort?: string) {

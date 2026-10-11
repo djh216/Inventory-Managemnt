@@ -3,15 +3,19 @@ import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 const links = [
-  { href: "/", label: "Live inventory", badge: true },
-  { href: "/days-on-hand", label: "Days on hand" },
+  { href: "/", label: "Days on hand" },
+  { href: "/inventory", label: "Live inventory", badge: true },
 ] as const
 
 function isCurrent(pathname: string | null, href: string) {
   if (!pathname) return false
   if (href === "/") {
+    return pathname === "/" || pathname === "/days-on-hand" || pathname.startsWith("/days-on-hand/")
+  }
+  if (href === "/inventory") {
     return (
-      pathname === "/" ||
+      pathname === "/inventory" ||
+      pathname.startsWith("/inventory/") ||
       pathname === "/catalog" ||
       pathname.startsWith("/catalog/") ||
       pathname === "/stock" ||
@@ -71,7 +75,10 @@ export function NavFrame({
   alertCount?: number
   orderHistoryPanel?: ReactNode
 }) {
-  const showOrderHistory = pathname === "/days-on-hand" || pathname?.startsWith("/days-on-hand/")
+  const showOrderHistory =
+    pathname === "/" ||
+    pathname === "/days-on-hand" ||
+    pathname?.startsWith("/days-on-hand/")
   return (
     <>
       <aside

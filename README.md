@@ -23,7 +23,7 @@ npm install
 npm run dev
 ```
 
-Open [http://127.0.0.1:4317](http://127.0.0.1:4317).
+Open [http://127.0.0.1:4317](http://127.0.0.1:4317) (lands on **Days on hand**; live inventory is at `/inventory`).
 
 ## Cloud Agent environment
 

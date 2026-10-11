@@ -11,7 +11,7 @@ test("parseInventoryView accepts legacy catalog and stock aliases", () => {
 })
 
 test("inventoryHref builds query strings for deep links", () => {
-  assert.equal(inventoryHref("overview"), "/")
-  assert.equal(inventoryProductHref("w-1"), "/?view=products&wine=w-1")
-  assert.equal(inventoryHref("floor", { house: "main" }), "/?view=floor&house=main")
+  assert.equal(inventoryHref("overview"), "/inventory")
+  assert.equal(inventoryProductHref("w-1"), "/inventory?view=products&wine=w-1")
+  assert.equal(inventoryHref("floor", { house: "main" }), "/inventory?view=floor&house=main")
 })

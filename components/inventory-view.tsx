@@ -68,7 +68,7 @@ export function InventoryView({
           {view === "overview" ? (
             <div className="flex flex-wrap gap-2">
               <Button onClick={postShipment}>Post a shipment</Button>
-              <Link href="/days-on-hand" className={buttonVariants({ variant: "outline" })}>
+              <Link href="/" className={buttonVariants({ variant: "outline" })}>
                 Days on hand
               </Link>
             </div>
