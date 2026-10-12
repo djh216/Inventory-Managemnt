@@ -14,6 +14,7 @@ function sampleBooks(): Books {
     ...base,
     orderHistory: [
       {
+        id: "oh-1",
         wineId: wine1.id,
         at: "2026-01-15T12:00:00.000Z",
         bottles: 3,

@@ -1,7 +1,5 @@
-import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { DaysOnHandPageContent } from "@/components/days-on-hand-page-content"
-import { DaysOnHandTableSkeleton } from "@/components/days-on-hand-table-skeleton"
 import { producersFromInventoryUpload } from "@/lib/csv-import"
 import { parseDaysOnHandQuery } from "@/lib/days-on-hand-query"
 import { inventoryHref, parseInventoryView } from "@/lib/inventory-routes"
@@ -41,9 +39,7 @@ export default async function Page({
           </p>
         </div>
       </header>
-      <Suspense fallback={<DaysOnHandTableSkeleton />}>
-        <DaysOnHandPageContent query={query} producerOptions={producerOptions} />
-      </Suspense>
+      <DaysOnHandPageContent query={query} producerOptions={producerOptions} />
     </div>
   )
 }

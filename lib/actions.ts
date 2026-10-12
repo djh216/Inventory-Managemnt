@@ -133,6 +133,12 @@ export async function importOrderHistoryCsv(formData: FormData): Promise<ActionR
   return { ok: true, message }
 }
 
+export async function setSalesPaceWindowFromForm(formData: FormData): Promise<ActionResult> {
+  const raw = formData.get("days")
+  const days = typeof raw === "string" ? Number.parseInt(raw, 10) : NaN
+  return setSalesPaceWindow(days)
+}
+
 export async function setSalesPaceWindow(days: number): Promise<ActionResult> {
   if (!Number.isInteger(days) || days < 7 || days > 365) {
     return { ok: false, error: "Pace window must be between 7 and 365 days." }
@@ -197,6 +203,30 @@ export async function importInventoryCsv(formData: FormData): Promise<ActionResu
     message += ` Kept ${result.orderLinesKept} order history lines matched by SKU.`
   }
   return { ok: true, message }
+}
+
+export async function importInventoryCsvForm(formData: FormData): Promise<void> {
+  await importInventoryCsv(formData)
+}
+
+export async function importOrderHistoryCsvForm(formData: FormData): Promise<void> {
+  await importOrderHistoryCsv(formData)
+}
+
+export async function clearInventoryUploadForm(): Promise<void> {
+  await clearInventoryUpload()
+}
+
+export async function resetBooksForm(): Promise<void> {
+  await resetBooks()
+}
+
+export async function clearOrderHistoryForm(): Promise<void> {
+  await clearOrderHistory()
+}
+
+export async function setSalesPaceWindowForm(formData: FormData): Promise<void> {
+  await setSalesPaceWindowFromForm(formData)
 }
 
 export async function clearInventoryUpload(): Promise<ActionResult> {

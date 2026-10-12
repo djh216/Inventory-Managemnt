@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { SidebarOrderHistory } from "@/components/sidebar-order-history"
+import { SidebarOrderHistoryServer } from "@/components/sidebar-order-history-server"
 import { formatCount, wineName } from "@/lib/format"
 import type { DaysOnHandTableRow } from "@/lib/days-on-hand-table"
 import {
@@ -77,7 +77,7 @@ export function DaysOnHandServerView({
       </section>
 
       <section className="rounded-xl bg-sidebar p-4 text-sidebar-foreground ring-1 ring-sidebar-border md:hidden">
-        <SidebarOrderHistory
+        <SidebarOrderHistoryServer
           orderLineCount={orderLineCount}
           orderHistoryImportedAt={orderHistoryImportedAt}
           salesPaceWindowDays={salesPaceWindowDays}

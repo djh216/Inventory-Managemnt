@@ -16,12 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
-export const INVENTORY_CSV_COLUMNS = [
-  "Label",
-  "SKU",
-  "Quantity On Hand",
-  "Quantity Available",
-] as const
+export { INVENTORY_CSV_COLUMNS } from "@/lib/inventory-csv-meta"
 
 export function ClearInventoryButton({ className }: { className?: string }) {
   const router = useRouter()
