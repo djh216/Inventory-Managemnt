@@ -1,6 +1,6 @@
 import fs from "fs"
 import path from "path"
-import { connection } from "next/server"
+import { cache } from "react"
 import { readInventoryCsv } from "@/lib/csv-import"
 import { applyInventoryUpload } from "@/lib/inventory-upload"
 import { seedBooks } from "@/lib/seed"
@@ -95,10 +95,7 @@ export function writeBooks(books: Books) {
   fs.renameSync(tempPath, booksPath)
 }
 
-export async function loadBooks() {
-  await connection()
-  return readBooks()
-}
+export const loadBooks = cache(async () => readBooks())
 
 export function restoreUploadBooks() {
   const rows = readInventoryCsv()

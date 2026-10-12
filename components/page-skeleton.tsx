@@ -7,12 +7,12 @@ export function PageSkeleton({ label }: { label: string }) {
         <div className="h-4 w-96 max-w-full rounded bg-muted" />
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-28 rounded-xl bg-card ring-1 ring-foreground/10" />
+        {Array.from({ length: 4 }, (_, index) => (
+          <div key={`skeleton-kpi-${index}`} className="h-28 rounded-xl bg-card ring-1 ring-foreground/10" />
         ))}
       </div>
       <div className="h-80 rounded-xl bg-card ring-1 ring-foreground/10" />
-      <p className="sr-only">Loading {label}</p>
+      <p className="text-center text-sm text-muted-foreground">Loading {label}…</p>
     </div>
   )
 }

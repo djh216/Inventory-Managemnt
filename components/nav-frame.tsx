@@ -3,15 +3,25 @@ import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 const links = [
-  { href: "/", label: "Live inventory", badge: true },
-  { href: "/days-on-hand", label: "Days on hand" },
-  { href: "/catalog", label: "Catalog" },
-  { href: "/stock", label: "Stock" },
+  { href: "/", label: "Days on hand" },
+  { href: "/inventory", label: "Live inventory", badge: true },
 ] as const
 
 function isCurrent(pathname: string | null, href: string) {
   if (!pathname) return false
-  if (href === "/") return pathname === "/"
+  if (href === "/") {
+    return pathname === "/" || pathname === "/days-on-hand" || pathname.startsWith("/days-on-hand/")
+  }
+  if (href === "/inventory") {
+    return (
+      pathname === "/inventory" ||
+      pathname.startsWith("/inventory/") ||
+      pathname === "/catalog" ||
+      pathname.startsWith("/catalog/") ||
+      pathname === "/stock" ||
+      pathname.startsWith("/stock/")
+    )
+  }
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
@@ -67,14 +77,18 @@ export function NavFrame({
   inventoryPanel?: ReactNode
   orderHistoryPanel?: ReactNode
 }) {
-  const showOrderHistory = pathname === "/days-on-hand" || pathname?.startsWith("/days-on-hand/")
+  const showOrderHistory =
+    pathname === "/" ||
+    pathname === "/days-on-hand" ||
+    pathname?.startsWith("/days-on-hand/")
   const showInventoryUpload =
     pathname === "/" ||
+    pathname === "/inventory" ||
+    pathname?.startsWith("/inventory/") ||
     pathname === "/catalog" ||
     pathname?.startsWith("/catalog/") ||
     pathname === "/stock" ||
-    pathname?.startsWith("/stock/") ||
-    showOrderHistory
+    pathname?.startsWith("/stock/")
   const wideSidebar = showOrderHistory || showInventoryUpload
   return (
     <>
@@ -117,7 +131,7 @@ export function NavFrame({
           )}
         >
           <p className="text-[11px] leading-5 text-sidebar-foreground/55">
-            Post shipments as orders, receive against winery POs, and tune lead time per wine in the catalog.
+            Post shipments as orders, receive against winery POs, and tune lead time per wine under Products.
           </p>
           {footer}
         </div>

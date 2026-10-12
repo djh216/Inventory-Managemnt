@@ -1,16 +1,26 @@
 "use client"
 
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 
-export default function Error({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  useEffect(() => {
+    console.error(error)
+  }, [error])
+
   return (
-    <div className="mx-auto max-w-lg py-16">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Books</p>
-      <h1 className="mt-2 font-heading text-4xl tracking-tight">The page didn&apos;t open</h1>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">
-        The inventory book is still on this machine. Try the page again.
+    <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-10 text-center">
+      <h2 className="font-heading text-2xl tracking-tight">Something went wrong</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        The page failed to render. Try again, or restart the dev server if you are running locally.
       </p>
-      <Button className="mt-6" onClick={() => reset()}>
+      <Button type="button" className="mt-4" onClick={() => reset()}>
         Try again
       </Button>
     </div>
