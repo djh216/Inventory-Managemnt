@@ -23,7 +23,7 @@ npm install
 npm run dev
 ```
 
-Open [http://127.0.0.1:4317](http://127.0.0.1:4317).
+Open [http://127.0.0.1:4317](http://127.0.0.1:4317) (lands on **Days on hand**; live inventory is at `/inventory`).
 
 ## Cloud Agent environment
 
@@ -50,8 +50,8 @@ Data lives in `data/books.json` (local). The baseline upload is `data/inventory-
 
 1. Start from the upload (or post **Receive** when a winery PO lands).
 2. Upload **order history** on **Days on hand** (or post **Ship** as new orders go out).
-3. Review **Days on hand** for cover by SKU; open **Live inventory** for winery reorder alerts.
-4. In the catalog, open a wine and set **Winery partner**, **Lead time**, and **Target cover** if defaults are wrong.
+3. Start from **Days on hand** for cover by SKU; open **Live inventory** (`/inventory`) for winery reorder alerts and postings.
+4. Under **Live inventory → Products**, open a wine and set **Winery partner**, **Lead time**, and **Target cover** if defaults are wrong.
 
 ## Tests
 

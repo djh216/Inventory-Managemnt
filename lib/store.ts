@@ -1,6 +1,8 @@
 import fs from "fs"
 import path from "path"
-import { connection } from "next/server"
+import { cache } from "react"
+import { readInventoryCsv } from "@/lib/csv-import"
+import { applyInventoryUpload } from "@/lib/inventory-upload"
 import { seedBooks } from "@/lib/seed"
 import type { Books, Wine } from "@/lib/types"
 
@@ -47,6 +49,10 @@ function migrateBooks(books: Books): Books {
     next = { ...next, salesPaceWindowDays: 30 }
     changed = true
   }
+  if (next.inventoryImportedAt === undefined) {
+    next = { ...next, inventoryImportedAt: null }
+    changed = true
+  }
   return changed ? next : books
 }
 
@@ -89,15 +95,24 @@ export function writeBooks(books: Books) {
   fs.renameSync(tempPath, booksPath)
 }
 
-export async function loadBooks() {
-  await connection()
-  return readBooks()
-}
+export const loadBooks = cache(async () => readBooks())
 
 export function restoreUploadBooks() {
-  const books = seedBooks()
-  writeBooks(books)
-  return books
+  const rows = readInventoryCsv()
+  if (rows.length === 0) {
+    const books = seedBooks()
+    writeBooks(books)
+    return books
+  }
+  const importedAt = new Date().toISOString()
+  const result = applyInventoryUpload(readBooks(), rows, importedAt)
+  if (!result.ok) {
+    const books = seedBooks()
+    writeBooks(books)
+    return books
+  }
+  writeBooks(result.books)
+  return result.books
 }
 
 /** @deprecated Use restoreUploadBooks */

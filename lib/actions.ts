@@ -6,6 +6,12 @@ import {
   applyOrderHistoryImport,
   parseOrderHistoryCsv,
 } from "@/lib/order-history-import"
+import {
+  clearInventoryUploadFile,
+  parseInventoryUploadCsv,
+  writeInventoryUploadFile,
+} from "@/lib/csv-import"
+import { applyInventoryUpload, emptyInventoryBooks } from "@/lib/inventory-upload"
 import { readBooks, restoreSampleBooks, writeBooks } from "@/lib/store"
 import type { ActionResult, CreateWineInput, PostingInput } from "@/lib/types"
 
@@ -127,6 +133,12 @@ export async function importOrderHistoryCsv(formData: FormData): Promise<ActionR
   return { ok: true, message }
 }
 
+export async function setSalesPaceWindowFromForm(formData: FormData): Promise<ActionResult> {
+  const raw = formData.get("days")
+  const days = typeof raw === "string" ? Number.parseInt(raw, 10) : NaN
+  return setSalesPaceWindow(days)
+}
+
 export async function setSalesPaceWindow(days: number): Promise<ActionResult> {
   if (!Number.isInteger(days) || days < 7 || days > 365) {
     return { ok: false, error: "Pace window must be between 7 and 365 days." }
@@ -156,5 +168,77 @@ export async function resetBooks(): Promise<ActionResult> {
     return { ok: false, error: "The upload could not be restored." }
   }
   revalidatePath("/", "layout")
-  return { ok: true, message: "Upload restored from inventory-upload.csv." }
+  return { ok: true, message: "Inventory reloaded from the saved CSV. Postings were cleared." }
+}
+
+export async function importInventoryCsv(formData: FormData): Promise<ActionResult> {
+  const file = formData.get("file")
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "Choose a CSV file to upload." }
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    return { ok: false, error: "Inventory upload must be 8 MB or smaller." }
+  }
+  const text = await file.text()
+  const parsed = parseInventoryUploadCsv(text)
+  if ("error" in parsed) {
+    return { ok: false, error: parsed.error }
+  }
+  try {
+    writeInventoryUploadFile(text)
+  } catch {
+    return { ok: false, error: "The inventory file could not be saved on this machine." }
+  }
+  const importedAt = new Date().toISOString()
+  const result = applyInventoryUpload(readBooks(), parsed, importedAt)
+  if (!result.ok) {
+    return { ok: false, error: result.error }
+  }
+  const failed = persist(result.books)
+  if (failed) return failed
+  let message = `Imported ${result.skuCount} SKUs from inventory upload.`
+  if (result.orderLinesDropped > 0) {
+    message += ` ${result.orderLinesDropped} order history line${result.orderLinesDropped === 1 ? "" : "s"} did not match a SKU and were removed.`
+  } else if (result.orderLinesKept > 0) {
+    message += ` Kept ${result.orderLinesKept} order history lines matched by SKU.`
+  }
+  return { ok: true, message }
+}
+
+export async function importInventoryCsvForm(formData: FormData): Promise<void> {
+  await importInventoryCsv(formData)
+}
+
+export async function importOrderHistoryCsvForm(formData: FormData): Promise<void> {
+  await importOrderHistoryCsv(formData)
+}
+
+export async function clearInventoryUploadForm(): Promise<void> {
+  await clearInventoryUpload()
+}
+
+export async function resetBooksForm(): Promise<void> {
+  await resetBooks()
+}
+
+export async function clearOrderHistoryForm(): Promise<void> {
+  await clearOrderHistory()
+}
+
+export async function setSalesPaceWindowForm(formData: FormData): Promise<void> {
+  await setSalesPaceWindowFromForm(formData)
+}
+
+export async function clearInventoryUpload(): Promise<ActionResult> {
+  try {
+    clearInventoryUploadFile()
+  } catch {
+    return { ok: false, error: "The inventory file could not be cleared." }
+  }
+  const failed = persist(emptyInventoryBooks())
+  if (failed) return failed
+  return {
+    ok: true,
+    message: "Inventory upload cleared. Upload a new CSV to rebuild the catalog.",
+  }
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { inventoryProductHref } from "@/lib/inventory-routes"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -171,7 +172,7 @@ export function LedgerView({
                     <td className="px-2 py-3">{MOVEMENT_LABEL[movement.type]}</td>
                     <td className="px-2 py-3">
                       {wine ? (
-                        <Link href={`/catalog?wine=${wine.id}`} className="hover:underline">
+                        <Link href={inventoryProductHref(wine.id)} className="hover:underline">
                           {wine.producer}
                           <span className="mt-0.5 block text-xs text-muted-foreground">
                             {wine.cuvee} {wine.vintage ?? "NV"}

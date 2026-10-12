@@ -3,15 +3,25 @@ import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 const links = [
-  { href: "/", label: "Live inventory", badge: true },
-  { href: "/days-on-hand", label: "Days on hand" },
-  { href: "/catalog", label: "Catalog" },
-  { href: "/stock", label: "Stock" },
+  { href: "/", label: "Days on hand" },
+  { href: "/inventory", label: "Live inventory", badge: true },
 ] as const
 
 function isCurrent(pathname: string | null, href: string) {
   if (!pathname) return false
-  if (href === "/") return pathname === "/"
+  if (href === "/") {
+    return pathname === "/" || pathname === "/days-on-hand" || pathname.startsWith("/days-on-hand/")
+  }
+  if (href === "/inventory") {
+    return (
+      pathname === "/inventory" ||
+      pathname.startsWith("/inventory/") ||
+      pathname === "/catalog" ||
+      pathname.startsWith("/catalog/") ||
+      pathname === "/stock" ||
+      pathname.startsWith("/stock/")
+    )
+  }
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
@@ -58,20 +68,34 @@ export function NavFrame({
   pathname,
   footer,
   alertCount = 0,
+  inventoryPanel,
   orderHistoryPanel,
 }: {
   pathname: string | null
   footer?: ReactNode
   alertCount?: number
+  inventoryPanel?: ReactNode
   orderHistoryPanel?: ReactNode
 }) {
-  const showOrderHistory = pathname === "/days-on-hand" || pathname?.startsWith("/days-on-hand/")
+  const showOrderHistory =
+    pathname === "/" ||
+    pathname === "/days-on-hand" ||
+    pathname?.startsWith("/days-on-hand/")
+  const showInventoryUpload =
+    pathname === "/" ||
+    pathname === "/inventory" ||
+    pathname?.startsWith("/inventory/") ||
+    pathname === "/catalog" ||
+    pathname?.startsWith("/catalog/") ||
+    pathname === "/stock" ||
+    pathname?.startsWith("/stock/")
+  const wideSidebar = showOrderHistory || showInventoryUpload
   return (
     <>
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex",
-          showOrderHistory ? "w-80" : "w-60",
+          wideSidebar ? "w-80" : "w-60",
         )}
       >
         <div className="h-1 bg-primary" />
@@ -80,7 +104,7 @@ export function NavFrame({
           <p className="mt-2 text-[11px] uppercase tracking-[0.22em] text-sidebar-foreground/55">
             Oct 6 upload
           </p>
-          {!showOrderHistory ? (
+          {!wideSidebar ? (
             <p className="mt-4 text-xs leading-5 text-sidebar-foreground/55">
               Shipments drive depletion; reorder alerts fire when days of cover hit partner lead time.
             </p>
@@ -89,20 +113,25 @@ export function NavFrame({
         <div className="shrink-0 px-3">
           <NavLinks pathname={pathname} stacked alertCount={alertCount} />
         </div>
-        {showOrderHistory ? <div className="min-h-0 flex-1" aria-hidden /> : null}
+        {showInventoryUpload || showOrderHistory ? <div className="min-h-0 flex-1 overflow-y-auto" /> : null}
+        {showInventoryUpload && inventoryPanel ? (
+          <div className="max-h-[min(40vh,calc(100vh-14rem))] shrink-0 overflow-y-auto border-t border-sidebar-border px-4 py-4">
+            {inventoryPanel}
+          </div>
+        ) : null}
         {showOrderHistory && orderHistoryPanel ? (
-          <div className="mt-auto max-h-[min(72vh,calc(100vh-11rem))] shrink-0 overflow-y-auto border-t border-sidebar-border px-4 py-4">
+          <div className="max-h-[min(40vh,calc(100vh-14rem))] shrink-0 overflow-y-auto border-t border-sidebar-border px-4 py-4">
             {orderHistoryPanel}
           </div>
         ) : null}
         <div
           className={cn(
             "shrink-0 space-y-3 border-t border-sidebar-border p-4",
-            !showOrderHistory && "mt-auto",
+            !wideSidebar && "mt-auto",
           )}
         >
           <p className="text-[11px] leading-5 text-sidebar-foreground/55">
-            Post shipments as orders, receive against winery POs, and tune lead time per wine in the catalog.
+            Post shipments as orders, receive against winery POs, and tune lead time per wine under Products.
           </p>
           {footer}
         </div>

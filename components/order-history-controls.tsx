@@ -15,13 +15,7 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
-export const OUTFIELD_COLUMNS = [
-  "Lead Team Member",
-  "Account Name",
-  "Order Date",
-  "Line Item Product Variation Name",
-  "Line Item Quantity",
-] as const
+export { OUTFIELD_COLUMNS } from "@/lib/order-history-meta"
 
 export function PaceWindowForm({
   windowDays,

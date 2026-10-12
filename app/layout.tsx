@@ -3,7 +3,6 @@ import { Fraunces, Geist, Geist_Mono } from "next/font/google"
 import { Suspense } from "react"
 import { AppNavLoader } from "@/components/app-nav-loader"
 import { NavFrame } from "@/components/nav-frame"
-import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -45,7 +44,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             {children}
           </main>
         </div>
-        <Toaster position="top-center" />
       </body>
     </html>
   )
